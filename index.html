@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#6e4422">
+  <meta name="description" content="Bộ Lạc Của Hiếu — game 2D mô phỏng sinh tồn và phát triển bộ lạc thời tiền sử.">
+  <title>Bộ Lạc Của Hiếu</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="top"></header>
+    <div id="view">
+      <canvas id="cv" aria-label="Bản đồ trại"></canvas>
+      <div id="goals" title="Bấm để thu gọn"></div>
+      <div id="toasts"></div>
+      <div id="buildhint" class="hidden">Chạm vào ô trống gần bếp lửa để đặt lều <button class="btn sm" id="bh-cancel">Hủy</button></div>
+      <div id="selbar" class="hidden"></div>
+      <div id="panel" class="sheet hidden"></div>
+      <div id="popup" class="sheet hidden"></div>
+    </div>
+    <nav id="bottom"></nav>
+  </div>
+  <div id="modal" class="hidden"></div>
+
+  <script src="config.js"></script>
+  <script src="art.js"></script>
+  <script src="world.js"></script>
+  <script src="sim.js"></script>
+  <script src="render.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
