@@ -170,7 +170,7 @@ const RENDER = (() => {
       const cx = (o.x + o.w / 2) * T - ox, cy = (o.y + o.h) * T - oy - 3;
       if (cx < -60 || cy < -60 || cx > vw + 60 || cy > vh + 80) continue;
       if (o.type === 'tree') shadow(lx, cx + 2, cy, 9, 3);
-      else if (o.type === 'hut' || o.type === 'site' || o.type === 'rack' || o.type === 'granary') shadow(lx, cx + 2, cy - 2, o.w * 11 + 1, 5);
+      else if (o.type === 'hut' || o.type === 'site' || o.type === 'rack' || o.type === 'granary' || o.type === 'healer' || o.type === 'workshop') shadow(lx, cx + 2, cy - 2, o.w * 11 + 1, 5);
       else if (o.type === 'longhouse') shadow(lx, cx + 2, cy - 2, 34, 5);
       else if (o.type === 'storage') shadow(lx, cx + 2, cy - 2, 22, 4);
       else if (o.type === 'bush' || o.type === 'boulder') shadow(lx, cx + 1, cy, 9, 3);
@@ -252,8 +252,11 @@ const RENDER = (() => {
       }
       (v.child ? EXP.drawChild : ART.drawVillager)(lx, X, Y, v, time + v.id * 0.37, pose, pose === 'sit' ? 0 : v.facing, ghost ? 0.4 : undefined);
       if (v.carry && !ghost) {
-        const vis = v.carry.vis === 'meat' ? { meat: 1 } : v.carry.vis === 'wood' ? { wood: 1 } : v.carry.vis === 'stone' ? { stone: 1 } : { food: 1 };
-        ART.drawCarry(lx, X, Y, vis);
+        if (v.carry.vis === 'fish') EXP.drawFishCarry(lx, X, Y);
+        else {
+          const vis = v.carry.vis === 'meat' ? { meat: 1 } : v.carry.vis === 'wood' ? { wood: 1 } : v.carry.vis === 'stone' ? { stone: 1 } : { food: 1 };
+          ART.drawCarry(lx, X, Y, vis);
+        }
       }
     }
   }

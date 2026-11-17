@@ -169,7 +169,7 @@ const UI = (() => {
       const re = row.querySelector('.vreason');
       re.textContent = reason; re.className = 'vreason' + (v.resting ? ' warn' : '');
       const close = S.villagers.filter(o => o !== v && (v.bonds[o.id] || 0) >= CFG.BOND.closeAt).map(o => o.name);
-      row.querySelector('.bond').textContent = close.length ? `♥ ${close.join(', ')}` : '';
+      row.querySelector('.bond').textContent = EXP.familyText(v, close);
       row.querySelector('.mbar.e i').style.cssText = `width:${v.energy}%;background:${v.energy < 25 ? '#e0703a' : '#f2c94c'}`;
       row.querySelector('.mbar.h i').style.cssText = `width:${v.health}%;background:#e0505a`;
       row.querySelector('.mbar.m i').style.cssText = `width:${v.morale}%;background:#7cc0f0`;
@@ -240,6 +240,8 @@ const UI = (() => {
     }
     const o = WORLD.byId(p.id);
     if (!o) return out;
+    const ex = EXP.objActions(o, n);
+    if (ex) return ex;
     const G = CFG.GATHER;
     switch (o.type) {
       case 'bush': {

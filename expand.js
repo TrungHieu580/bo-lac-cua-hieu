@@ -13,12 +13,14 @@ const EXP = (() => {
   const pick = (a) => a[Math.floor(rand() * a.length)];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const SK = CFG.SKILL_NAMES;
-  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse'];
+  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop'];
   const DESC = {
     hut: `Chỗ ngủ cho ${CFG.HUT.sleepers} người, hồi phục tốt hơn.`,
     rack: `+${B.rack.foodCap} sức chứa thức ăn, thịt săn được +${Math.round(B.rack.meatBonus * 100)}%.`,
     granary: `+${B.granary.foodCap} sức chứa thức ăn.`,
     longhouse: `Chỗ ngủ cho ${B.longhouse.beds} người.`,
+    healer: `Mỗi đêm mọi người hồi thêm ${CFG.HEALER.heal} sức khỏe, vết thương mau lành.`,
+    workshop: `Công cụ tốt hơn: xây dựng, đốn gỗ, nhặt đá nhanh hơn ${Math.round((CFG.WORKSHOP.buildBonus - 1) * 100)}%.`,
   };
 
   // ---------------- TIỆN ÍCH ----------------
@@ -40,7 +42,14 @@ const EXP = (() => {
     if (s.autoSkipV !== 2) { s.autoSkipNight = true; s.autoSkipV = 2; } // mặc định tự sang ngày mới
     if (!s.mapW) { s.mapW = s.terrain.length === 36 * 28 ? 36 : CFG.MAP_W; s.mapH = s.terrain.length / s.mapW; }
     if (!s.pop) s.pop = { lastBirth: 0, arrivals: 0, births: 0, initBoulders: s.objects.filter(o => o.type === 'boulder').length };
-    s.villagers.forEach(v => { if (v.child === undefined) v.child = false; });
+    s.villagers.forEach(v => {
+      if (v.child === undefined) v.child = false;
+      if (!v.sex) v.sex = CFG.SEXES[v.name] || (Math.random() < 0.5 ? 'm' : 'f');
+      if (v.partner === undefined) v.partner = 0;
+      if (v.pregnant === undefined) v.pregnant = 0;
+    });
+    if (s.pop.lastFestival === undefined) s.pop.lastFestival = 0;
+    if (!s.pop.unlocked) s.pop.unlocked = {};
     if (s.planNote === undefined) s.planNote = '';
   }
 
@@ -98,6 +107,29 @@ const EXP = (() => {
       rect(x, 2, 47, 68, 2, '#24461b');
       SP.longhouse = c;
     }
+    { // lều thảo dược
+      const [c, x] = mk(48, 52);
+      ell(x, 24, 42, 19, 7, '#8a6034'); rect(x, 6, 34, 36, 9, '#8a6034');
+      for (let i = 6; i < 42; i += 4) rect(x, i, 34, 1, 10, '#6b4224');
+      ell(x, 24, 26, 21, 15, '#5f7a2e'); ell(x, 22, 22, 15, 10, '#76963a'); ell(x, 19, 18, 7, 4, '#93b04a');
+      for (let k = 0; k < 40; k++) px(x, 6 + (k * 7) % 36, 14 + (k * 5) % 20, '#4a6324');
+      rect(x, 21, 37, 7, 10, '#2a1a0e');
+      rect(x, 35, 31, 11, 1, '#6b4224');
+      for (const [hx, col] of [[36, '#4fa04a'], [39, '#9a6ad0'], [42, '#4fa04a'], [44, '#e0c040']]) rect(x, hx, 32, 2, 5, col);
+      rect(x, 23, 9, 3, 3, '#5a4a3a'); px(x, 24, 7, '#c8c8c8'); px(x, 25, 5, '#d8d8d8'); px(x, 23, 3, '#e8e8e8');
+      SP.healer = c;
+    }
+    { // xưởng chế tác
+      const [c, x] = mk(48, 48);
+      for (const cx of [4, 41]) { rect(x, cx, 14, 3, 30, '#6b4224'); rect(x, cx, 14, 1, 30, '#875632'); }
+      for (let y = 6; y < 16; y++) { const off = Math.round((16 - y) * 0.4); for (let i = off; i < 48 - off; i++) px(x, i, y, (y % 4 < 2) ? '#4f8a36' : (i > 36 ? '#2c5221' : '#3d6e2c')); }
+      for (let i = 0; i < 48; i += 2) px(x, i, 16, '#24461b');
+      ell(x, 18, 39, 7, 4, '#7d8188'); ell(x, 17, 37, 6, 3, '#a7abb1');
+      rect(x, 25, 29, 2, 11, '#6b4224'); rect(x, 23, 27, 6, 3, '#8d9198'); px(x, 23, 27, '#c0c4c8');
+      ell(x, 34, 38, 4, 4, '#b8653a'); rect(x, 32, 32, 4, 2, '#a0522d'); ell(x, 33, 37, 2, 2, '#d88a5a');
+      rect(x, 7, 41, 10, 2, '#6b4224'); rect(x, 8, 39, 8, 2, '#875632');
+      SP.workshop = c;
+    }
     return SP;
   }
   function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; return sprites()[k] || ART.SPR.hut; }
@@ -105,11 +137,29 @@ const EXP = (() => {
   function drawObj(o, X, Y, lx) {
     const sp = sprites();
     if (o.type === 'sapling') return () => lx.drawImage(sp.sapling, X + 5, Y + T - 16);
-    if (sp[o.type] && (o.type === 'rack' || o.type === 'granary' || o.type === 'longhouse')) {
+    if (o.type === 'fishspot') return () => drawFishspot(o, X, Y, lx);
+    if (sp[o.type] && (o.type === 'rack' || o.type === 'granary' || o.type === 'longhouse' || o.type === 'healer' || o.type === 'workshop')) {
       const s = sp[o.type];
       return () => lx.drawImage(s, X, Y + o.h * T - s.height + 2);
     }
     return null;
+  }
+
+  function drawFishspot(o, X, Y, lx) {
+    const t = performance.now() / 1000 + o.id * 0.7;
+    const cx = X + 12, cy = Y + 13, r = (t * 6) % 9;
+    lx.strokeStyle = `rgba(220,240,255,${Math.max(0, 0.6 - r / 15)})`; lx.lineWidth = 1;
+    lx.beginPath(); lx.ellipse(cx + 0.5, cy + 0.5, r + 1, (r + 1) / 2, 0, 0, Math.PI * 2); lx.stroke();
+    if (o.stock > 0) {
+      const ph = t % 3;
+      if (ph < 0.5) { const jy = Math.round(Math.sin(ph / 0.5 * Math.PI) * 5); ART.rect(lx, cx - 2, cy - 2 - jy, 4, 2, '#c8d8e8'); ART.px(lx, cx + 2, cy - 3 - jy, '#a0b0c0'); }
+      ART.rect(lx, X + 3, Y + 5, 1, 8, '#6b4224'); ART.px(lx, X + 3, Y + 4, '#e05a3a');
+    }
+  }
+  function drawFishCarry(lx, X, Y) {
+    const y = Y - 21;
+    ART.rect(lx, X - 4, y + 1, 7, 3, '#a8b8c8'); ART.rect(lx, X - 4, y + 1, 7, 1, '#d0e0f0');
+    ART.px(lx, X + 3, y, '#8898a8'); ART.px(lx, X + 3, y + 4, '#8898a8'); ART.px(lx, X - 3, y + 2, '#1a1a1a');
   }
 
   // Trẻ con: sprite nhỏ ~10 px
@@ -392,7 +442,13 @@ const EXP = (() => {
   const dist = (v, o) => { const [tx, ty] = SIM.tileOf(v); return Math.abs(tx - o.x) + Math.abs(ty - o.y); };
   const nearest = (v, list) => { let b = null, bd = 1e9; for (const o of list) { const d = dist(v, o); if (d < bd) { bd = d; b = o; } } return b; };
 
-  function costOf(w) { return w === 'upgrade' ? CFG.STORAGE_UPGRADE : B[w]; }
+  function upgradeCost() { const st = WORLD.storage(); return (CFG.STORAGE_UPGRADES && CFG.STORAGE_UPGRADES[st.level]) || CFG.STORAGE_UPGRADE; }
+  function storageFull() {
+    const st = WORLD.storage();
+    if (st.level >= CFG.STORAGE_CAP.length - 1) return false;
+    return ['wood', 'stone', 'food'].some(r => S.res[r] >= SIM.cap(r) * 0.9);
+  }
+  function costOf(w) { return w === 'upgrade' ? upgradeCost() : B[w]; }
 
   function manage() {
     const pop = S.villagers.length;
@@ -400,12 +456,15 @@ const EXP = (() => {
     const st = WORLD.storage();
     want = null;
     S.planNote = '';
-    if (!site && !st.upgrading) {
+    if (!st.upgrading && storageFull()) want = 'upgrade'; // ưu tiên số 1: kho gần đầy thì nâng cấp
+    else if (!site && !st.upgrading) {
       const shortBeds = Math.min(pop + 2, CFG.POP.max) - beds();
       if (shortBeds > 0) want = unlocked('longhouse') && count('longhouse') < Math.floor(pop / 8) ? 'longhouse' : 'hut';
-      else if (st.level === 0 && (pop >= 8 || S.res.wood >= SIM.cap('wood') - 6 || S.res.stone >= SIM.cap('stone') - 6)) want = 'upgrade';
+      else if (st.level === 0 && pop >= 8) want = 'upgrade';
       else if (unlocked('rack') && count('rack') < (pop >= 14 ? 2 : 1)) want = 'rack';
       else if (unlocked('granary') && count('granary') < (pop >= 18 ? 2 : 1)) want = 'granary';
+      else if (unlocked('healer') && count('healer') < 1) want = 'healer';
+      else if (unlocked('workshop') && count('workshop') < 1) want = 'workshop';
     }
     if (want) {
       const c = costOf(want);
@@ -466,11 +525,13 @@ const EXP = (() => {
     const site = S.objects.find(o => o.type === 'site' && !isBad(o.id));
     if (site && workers(site.id) < 4) push(8, 'build', 'build', { type: 'build', target: site.id });
     const st = WORLD.storage();
-    if (st.upgrading && workers(st.id, 'upgrade') < 3) push(6, 'build', 'build', { type: 'upgrade' });
+    if (st.upgrading && workers(st.id, 'upgrade') < 4) push(10, 'build', 'build', { type: 'upgrade' });
     const bush = nearest(v, S.objects.filter(o => o.type === 'bush' && o.stock > 0 && !isBad(o.id) && workers(o.id) < 2));
     if (bush) push(Math.max(ctx.foodW, ctx.seedW), 'food', 'gather', { type: 'gather', target: bush.id });
-    if (ctx.canHunt) {
-      const partner = idle.filter(x => x !== v && !x.job && !x.resting && x.skills.hunt >= 2).sort((a, b) => b.skills.hunt - a.skills.hunt)[0];
+    const fish = nearest(v, S.objects.filter(o => o.type === 'fishspot' && o.stock > 0 && !isBad(o.id) && workers(o.id) < 2));
+    if (fish) push(ctx.foodW * 1.1, 'food', 'gather', { type: 'gather', target: fish.id });
+    if (ctx.canHunt && !v.pregnant) {
+      const partner = idle.filter(x => x !== v && !x.job && !x.resting && !x.pregnant && x.skills.hunt >= 2).sort((a, b) => b.skills.hunt - a.skills.hunt)[0];
       if (partner) push(ctx.foodW * 1.3 + 1, 'food', 'hunt', { type: 'hunt', target: ctx.zone.id }, [v, partner]);
     }
     const tree = nearest(v, S.objects.filter(o => o.type === 'tree' && !isBad(o.id) && workers(o.id) < 2));
@@ -544,7 +605,7 @@ const EXP = (() => {
     skills[main] = 4 + (rand() < 0.4 ? 1 : 0);
     const f = WORLD.fire();
     const tile = WORLD.nearestMain(Math.max(0, f.x - 12), f.y + 1);
-    const v = addVillager({ name: newName(), main, skills, hair: pick(HAIRS), tunic: pick(TUNICS), band: pick(BANDS), skin: pick(SKINS), energy: 80, health: 90, morale: 65, child: false }, tile);
+    const v = addVillager({ name: newName(), main, skills, hair: pick(HAIRS), tunic: pick(TUNICS), band: pick(BANDS), skin: pick(SKINS), energy: 80, health: 90, morale: 65, child: false, sex: rand() < 0.5 ? 'm' : 'f', partner: 0, pregnant: 0 }, tile);
     S.pop.arrivals++;
     SIM.event(`${v.name} (giỏi ${SK[main]}) từ một bộ lạc xa tìm đến xin gia nhập.`);
     EV.emit('toast', `Người mới: ${v.name} gia nhập bộ lạc!`);
@@ -557,8 +618,8 @@ const EXP = (() => {
     const f = WORLD.fire();
     const tile = WORLD.nearestMain(f.x, f.y + 1);
     const _bonds = { [a.id]: 85, [b.id]: 85 };
-    const v = addVillager({ name: newName(), main, skills, hair: rand() < 0.5 ? a.hair : b.hair, tunic: pick(TUNICS), band: pick(BANDS), skin: rand() < 0.5 ? a.skin : b.skin, energy: 100, health: 100, morale: 80, child: true, growDay: S.day + CFG.POP.childDays, _bonds }, tile);
-    S.pop.lastBirth = S.day; S.pop.births++;
+    const v = addVillager({ name: newName(), main, skills, hair: rand() < 0.5 ? a.hair : b.hair, tunic: pick(TUNICS), band: pick(BANDS), skin: rand() < 0.5 ? a.skin : b.skin, energy: 100, health: 100, morale: 80, child: true, growDay: S.day + CFG.POP.childDays, sex: rand() < 0.5 ? 'm' : 'f', parents: [a.id, b.id], partner: 0, pregnant: 0, _bonds }, tile);
+    S.pop.lastBirth = S.day; S.pop.births++; a.lastBirth = S.day;
     SIM.event(`${a.name} và ${b.name} chào đón bé ${v.name}!`);
     EV.emit('toast', `Bé ${v.name} chào đời!`);
   }
@@ -566,6 +627,7 @@ const EXP = (() => {
   function regrow() {
     const R = CFG.REGROW, f = WORLD.fire();
     for (const o of S.objects.slice()) {
+      if (o.type === 'fishspot') { o.stock = Math.min(CFG.GATHER.fish.stock, o.stock + CFG.GATHER.fish.regen); continue; }
       if (o.type === 'stump') {
         o.age = (o.age || 0) + 1;
         if (o.age >= 2 && Math.hypot(o.x - f.x, o.y - f.y) > 5 && rand() < R.saplingChance) { o.type = 'sapling'; o.days = 0; }
@@ -594,14 +656,139 @@ const EXP = (() => {
     for (const v of S.villagers) if (v.child && S.day >= v.growDay) { v.child = false; SIM.event(`${v.name} đã lớn và bắt đầu phụ giúp bộ lạc.`); }
     const P = CFG.POP;
     const ok = () => S.villagers.length < P.max && beds() - S.villagers.length >= 1 && SIM.foodDays() >= P.minFoodDays && avgMorale() >= P.minMorale;
-    if (ok() && S.day - (S.pop.lastBirth || 0) >= P.birthGapDays) {
-      const a = adults().filter(v => v.health >= 60);
-      const pairs = [];
-      for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) if ((a[i].bonds[a[j].id] || 0) >= P.bondForBirth) pairs.push([a[i], a[j]]);
-      if (pairs.length && rand() < P.birthChance) birth(...pick(pairs));
-    }
+    family(ok);
     if (ok() && rand() < P.newcomerChance) newcomer();
+    unlocks();
+    festival();
+    if (count('healer')) for (const v of S.villagers) v.health = Math.min(100, v.health + CFG.HEALER.heal);
     regrow();
+  }
+
+  // ---------------- GIA ĐÌNH: nên duyên, mang thai, sinh con ----------------
+  function family(ok) {
+    const F = CFG.FAMILY, P = CFG.POP;
+    const single = adults().filter(v => !v.partner);
+    for (const a of single) {
+      if (a.partner || a.sex !== 'm') continue;
+      const cands = single.filter(b => !b.partner && b.sex === 'f' && (a.bonds[b.id] || 0) >= F.coupleBond).sort((x, y) => (a.bonds[y.id] || 0) - (a.bonds[x.id] || 0));
+      if (!cands.length) continue;
+      const b = cands[0];
+      a.partner = b.id; b.partner = a.id;
+      a.bonds[b.id] = b.bonds[a.id] = Math.max(a.bonds[b.id] || 0, 80);
+      S.villagers.forEach(v => v.morale = Math.min(100, v.morale + 3));
+      SIM.event(`${a.name} và ${b.name} nên duyên vợ chồng. Cả bộ lạc mừng cho họ!`);
+      EV.emit('toast', `${a.name} và ${b.name} nên duyên vợ chồng!`);
+    }
+    for (const m of S.villagers) {
+      if (!(m.pregnant > 0)) continue;
+      m.pregnant--;
+      if (m.pregnant <= 0) { m.pregnant = 0; birth(m, SIM.vById(m.partner) || m); }
+    }
+    if (!ok()) return;
+    for (const f of adults()) {
+      if (f.sex !== 'f' || !f.partner || f.pregnant > 0 || f.health < 60) continue;
+      if (S.day - (f.lastBirth || -99) < F.birthGapDays) continue;
+      const coming = S.villagers.filter(v => v.pregnant > 0).length;
+      if (S.villagers.length + coming >= Math.min(P.max, beds())) break;
+      if (rand() < F.pregnancyChance) {
+        f.pregnant = F.pregnancyDays;
+        const dad = SIM.vById(f.partner);
+        SIM.event(`${f.name}${dad ? ` và ${dad.name}` : ''} sắp có em bé (mang thai, còn ${F.pregnancyDays} ngày).`);
+        EV.emit('toast', `${f.name} đang mang thai!`);
+      }
+    }
+  }
+
+  // ---------------- MỞ KHÓA THEO DÂN SỐ ----------------
+  function createFishspots() {
+    const f = WORLD.fire(), cand = [];
+    for (let y = 0; y < WORLD.H; y++) for (let x = 0; x < WORLD.W; x++) {
+      if (WORLD.ter(x, y) !== 'water' || WORLD.objAt(x, y)) continue;
+      let bank = false;
+      for (let dy = -1; dy <= 1 && !bank; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && WORLD.inMain(x + dx, y + dy)) { bank = true; break; }
+      if (bank) cand.push([x, y, Math.hypot(x - f.x, y - f.y)]);
+    }
+    cand.sort((a, b) => a[2] - b[2]);
+    const picked = [];
+    for (const c of cand) {
+      if (picked.length >= CFG.FISH.spots) break;
+      if (picked.some(p => Math.abs(p[0] - c[0]) + Math.abs(p[1] - c[1]) < 4)) continue;
+      picked.push(c);
+      WORLD.addObj({ type: 'fishspot', x: c[0], y: c[1], w: 1, h: 1, stock: CFG.GATHER.fish.stock });
+    }
+    return picked.length;
+  }
+  const UNLOCKS = () => [
+    [B.rack.unlock, B.rack.name], [CFG.FISH.unlock, 'Câu cá bên sông'], [B.granary.unlock, B.granary.name],
+    [B.longhouse.unlock, B.longhouse.name], [CFG.FESTIVAL.unlock, `Lễ hội lửa trại (mỗi ${CFG.FESTIVAL.everyDays} ngày)`],
+    [B.healer.unlock, B.healer.name], [B.workshop.unlock, B.workshop.name],
+  ].sort((a, b) => a[0] - b[0]);
+  function unlocks() {
+    const pop = S.villagers.length;
+    if (pop >= CFG.FISH.unlock && !S.objects.some(o => o.type === 'fishspot')) {
+      const n = createFishspots();
+      if (n) { SIM.event(`Bộ lạc đã đủ đông để học nghề câu cá! ${n} bến cá xuất hiện dọc bờ sông.`); EV.emit('toast', 'Mở khóa: Câu cá bên sông!'); }
+    }
+    for (const [need, name] of UNLOCKS()) {
+      if (pop >= need && !S.pop.unlocked[name]) {
+        S.pop.unlocked[name] = true;
+        if (S.day > 1 && name !== 'Câu cá bên sông') { SIM.log(`Mở khóa: ${name}.`, 'ev'); EV.emit('toast', `Mở khóa: ${name}`); }
+      }
+    }
+  }
+  function festival() {
+    const F = CFG.FESTIVAL;
+    if (S.villagers.length < F.unlock || S.day - (S.pop.lastFestival || 0) < F.everyDays || SIM.foodDays() < 4) return;
+    S.pop.lastFestival = S.day;
+    const cost = S.villagers.length;
+    S.res.food = Math.max(0, S.res.food - cost);
+    S.villagers.forEach(v => v.morale = Math.min(100, v.morale + F.morale));
+    const ad = adults(), ms = ad.filter(v => v.sex === 'm'), fs = ad.filter(v => v.sex === 'f');
+    for (let k = 0; k < ad.length; k++) {
+      const a = pick(ad), b = ms.length && fs.length && k % 2 ? (a.sex === 'm' ? pick(fs) : pick(ms)) : pick(ad);
+      if (a !== b) a.bonds[b.id] = b.bonds[a.id] = Math.min(100, (a.bonds[b.id] || 0) + F.bond);
+    }
+    SIM.event(`Lễ hội lửa trại mừng làng lớn mạnh! Cả bộ lạc ca hát nhảy múa (−${cost} thức ăn, tinh thần tăng mạnh).`);
+    EV.emit('toast', 'Đêm qua có lễ hội lửa trại — cả làng phấn khởi!');
+  }
+
+  // ---------------- TIỆN ÍCH CHO SIM / UI ----------------
+  function workMult(v, skill) {
+    let m = 1;
+    if (v.pregnant > 0) m *= CFG.FAMILY.pregnantWork;
+    if (skill === 'build' && count('workshop')) m *= CFG.WORKSHOP.buildBonus;
+    return m;
+  }
+  function chatPair(a, b) {
+    if (rand() < 0.5) {
+      const ad = adults().filter(v => !v.partner), ms = ad.filter(v => v.sex === 'm'), fs = ad.filter(v => v.sex === 'f');
+      if (ms.length && fs.length) return [pick(ms), pick(fs)];
+    }
+    return [a, b];
+  }
+  function familyText(v, close) {
+    const parts = [v.sex === 'f' ? '♀' : '♂'];
+    const mate = v.partner ? SIM.vById(v.partner) : null;
+    if (mate) parts.push(`bạn đời: ${mate.name}`);
+    if (v.pregnant > 0) parts.push(`mang thai · còn ${v.pregnant} ngày`);
+    if (v.parents) { const ps = v.parents.map(id => SIM.vById(id)).filter(Boolean).map(x => x.name); if (ps.length) parts.push(`con của ${[...new Set(ps)].join(' & ')}`); }
+    const others = close.filter(n => !mate || n !== mate.name);
+    if (others.length) parts.push(`♥ ${others.slice(0, 3).join(', ')}${others.length > 3 ? ` +${others.length - 3}` : ''}`);
+    return parts.join(' · ');
+  }
+  function objActions(o) {
+    if (o.type === 'fishspot') {
+      const g = CFG.GATHER.fish;
+      return { title: 'Bến cá', desc: o.stock > 0 ? `Còn khoảng ${o.stock} con cá · mỗi đêm hồi ${g.regen}` : 'Cá tạm hết, mai quay lại', actions: [{ spec: { type: 'gather', target: o.id }, label: 'Câu cá', detail: `Mỗi chuyến ≈ ${g.hours} giờ: +${g.perTrip} thức ăn · dùng kỹ năng Hái lượm` }] };
+    }
+    if (o.type === 'healer' || o.type === 'workshop') return { title: bname(o.type), desc: bdesc(o.type), actions: [] };
+    if (o.type === 'storage') {
+      const maxL = CFG.STORAGE_CAP.length - 1, u = upgradeCost();
+      const out = { title: `Kho chung (cấp ${o.level + 1}/${maxL + 1})`, desc: `Sức chứa ${SIM.cap('wood')} gỗ/đá, ${SIM.cap('food')} thức ăn · đang có: thức ăn ${S.res.food}, gỗ ${S.res.wood}, đá ${S.res.stone}, hạt ${S.res.seeds}. Làng tự nâng cấp khi kho gần đầy.`, actions: [] };
+      if (o.level < maxL) out.actions.push({ spec: { type: 'upgrade' }, label: o.upgrading ? 'Tiếp tục nâng cấp' : `Nâng cấp lên cấp ${o.level + 2}`, detail: o.upgrading ? `Tiến độ ${Math.round(o.upgrading.progress / o.upgrading.need * 100)}%` : `Chi phí: ${u.wood} gỗ, ${u.stone} đá · ${u.hours} giờ công · sức chứa → ${CFG.STORAGE_CAP[o.level + 1]}` });
+      return out;
+    }
+    return null;
   }
 
   function autoSkip(j) {
@@ -619,7 +806,7 @@ const EXP = (() => {
   // ---------------- GIAO DIỆN ----------------
   const ic = (k) => ART.icon(k);
   function buildPanelHTML() {
-    const st = WORLD.storage(), u = CFG.STORAGE_UPGRADE;
+    const st = WORLD.storage(), u = upgradeCost(), maxL = CFG.STORAGE_CAP.length - 1;
     const rows = Object.keys(B).map(k => {
       const b = B[k];
       let msg = '';
@@ -630,12 +817,12 @@ const EXP = (() => {
       return `<div class="act"><div class="act-main"><b>${k === 'hut' ? ic('hut') : ''} ${b.name} <small style="display:inline;opacity:.7">(có ${count(k)})</small></b><small>Chi phí: ${b.wood} gỗ, ${b.stone} đá · ${b.hours} giờ công · ${b.w}×${b.h} ô. ${bdesc(k)}</small>${msg ? `<div class="act-msg err">${msg}</div>` : ''}</div>
         <button class="btn go" data-act="place-${k}" ${msg ? 'disabled' : ''}>Chọn vị trí</button></div>`;
     }).join('');
-    const upMsg = st.level >= 1 ? 'Kho đã ở cấp cao nhất' : st.upgrading ? 'Đang nâng cấp' : S.res.wood < u.wood ? `Cần thêm ${u.wood - S.res.wood} gỗ` : S.res.stone < u.stone ? `Cần thêm ${u.stone - S.res.stone} đá` : '';
+    const upMsg = st.level >= maxL ? 'Kho đã ở cấp cao nhất' : st.upgrading ? 'Đang nâng cấp' : S.res.wood < u.wood ? `Cần thêm ${u.wood - S.res.wood} gỗ` : S.res.stone < u.stone ? `Cần thêm ${u.stone - S.res.stone} đá` : '';
     return `<div class="sheet-head"><h3>${ic('hut')} Xây dựng & mở mang</h3><button class="x" data-close>✕</button></div>
       <div class="sheet-sub">Vật liệu trừ một lần khi xác nhận. Chỗ ngủ: <b>${beds()}</b> cho <b>${S.villagers.length}</b> người. ${S.auto ? 'Khi bật Tự động, làng cũng tự quyết định xây.' : ''}</div>
       ${rows}
-      <div class="act"><div class="act-main"><b>Nâng cấp kho</b><small>Chi phí: ${u.wood} gỗ, ${u.stone} đá · ${u.hours} giờ công · sức chứa ${CFG.STORAGE_CAP[0]} → ${CFG.STORAGE_CAP[1]} mỗi loại. Thức ăn hiện chứa tối đa ${SIM.cap('food')}.</small>${upMsg ? `<div class="act-msg ${st.upgrading ? '' : 'err'}">${upMsg}</div>` : ''}</div>
-        <button class="btn go" data-act="upgrade" ${st.level >= 1 ? 'disabled' : ''}>Chọn kho</button></div>
+      <div class="act"><div class="act-main"><b>Nâng cấp kho (cấp ${st.level + 1}/${maxL + 1})</b><small>${st.level >= maxL ? 'Đã đạt cấp tối đa.' : `Chi phí: ${u.wood} gỗ, ${u.stone} đá · ${u.hours} giờ công · sức chứa ${CFG.STORAGE_CAP[st.level]} → ${CFG.STORAGE_CAP[st.level + 1]} mỗi loại.`} Thức ăn hiện chứa tối đa ${SIM.cap('food')}. Làng tự nâng cấp khi kho gần đầy.</small>${upMsg ? `<div class="act-msg ${st.upgrading ? '' : 'err'}">${upMsg}</div>` : ''}</div>
+        <button class="btn go" data-act="upgrade" ${st.level >= maxL ? 'disabled' : ''}>Chọn kho</button></div>
       <div class="act"><div class="act-main"><b>${ic('field')} Mở ruộng mới</b><small>Không tốn vật liệu. Chạm vào bãi cỏ trống gần trại để chọn chỗ, hoặc để làng tự chọn. Hiện có ${count('plot')} ruộng.</small></div>
         <button class="btn go" data-act="ex-plot">Tự chọn chỗ</button></div>`;
   }
@@ -650,7 +837,8 @@ const EXP = (() => {
       <div class="act"><div class="act-main"><b>Tự sang ngày mới</b><small>Hết ngày tự sang sáng hôm sau, chỉ hiện tóm tắt ngắn. Tắt đi nếu muốn đọc nhật ký cuối ngày mỗi tối (vẫn xem lại được trong nút Nhật ký).</small></div>
         <button class="btn ${S.autoSkipNight ? 'go' : ''}" data-act="ex-skip">${S.autoSkipNight ? 'Đang bật' : 'Đang tắt'}</button></div>
       <div class="jsec"><h4>Kế hoạch của làng</h4><div id="ex-plan" class="sheet-sub"></div></div>
-      <div class="jsec"><h4>Dân số</h4><div id="ex-pop" class="sheet-sub"></div></div>`;
+      <div class="jsec"><h4>Dân số & gia đình</h4><div id="ex-pop" class="sheet-sub"></div></div>
+      <div class="jsec"><h4>Mở khóa theo dân số</h4><div id="ex-unlock" class="sheet-sub"></div></div>`;
   }
   function updateAutoPanel(p) {
     const plan = p.querySelector('#ex-plan'), popEl = p.querySelector('#ex-pop');
@@ -667,15 +855,19 @@ const EXP = (() => {
     const P = CFG.POP, pop = S.villagers.length, free = beds() - pop, fd = SIM.foodDays(), mo = avgMorale();
     const kids = S.villagers.filter(v => v.child).length;
     const row = (ok, t) => `<div class="${ok ? '' : 'warn'}">${ok ? '✓' : '○'} ${t}</div>`;
-    const pairs = [];
-    const a = adults();
-    for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) if ((a[i].bonds[a[j].id] || 0) >= P.bondForBirth) pairs.push(`${a[i].name} & ${a[j].name}`);
-    const htmlPop = `Dân số <b>${pop}</b> (trẻ con ${kids}) · đã có ${S.pop.arrivals} người mới tới, ${S.pop.births} em bé.<br>Mỗi đêm có thể có người mới tới hoặc em bé chào đời khi:
+    const couples = S.villagers.filter(v => v.partner && v.sex === 'f').map(f => { const m = SIM.vById(f.partner); return `${m ? m.name : '?'} & ${f.name}${f.pregnant > 0 ? ` (mang thai, còn ${f.pregnant} ngày)` : ''}`; });
+    const ms = adults().filter(v => v.sex === 'm').length, fs = adults().filter(v => v.sex === 'f').length;
+    const htmlPop = `Dân số <b>${pop}</b> (nam ${ms}, nữ ${fs}, trẻ con ${kids}) · ${S.pop.arrivals} người mới tới, ${S.pop.births} em bé đã chào đời.<br>Mỗi đêm có thể có người mới tới, hoặc vợ chồng có tin vui, khi:
       ${row(free >= 1, `Còn chỗ ngủ trống: ${Math.max(0, free)} (cần ≥ 1)`)}
       ${row(fd >= P.minFoodDays, `Thức ăn đủ ${Math.floor(fd * 10) / 10} ngày (cần ≥ ${P.minFoodDays})`)}
       ${row(mo >= P.minMorale, `Tinh thần trung bình ${Math.round(mo)} (cần ≥ ${P.minMorale})`)}
-      ${row(pairs.length > 0, `Cặp thân thiết để sinh con: ${pairs.length ? pairs.join(', ') : 'chưa có (gắn kết ≥ ' + P.bondForBirth + ')'}`)}`;
+      ${row(couples.length > 0, `Vợ chồng: ${couples.length ? couples.join(', ') : `chưa có (nam và nữ gắn kết từ ${CFG.FAMILY.coupleBond} sẽ nên duyên)`}`)}`;
     if (popEl._last !== htmlPop) { popEl.innerHTML = htmlPop; popEl._last = htmlPop; }
+    const un = p.querySelector('#ex-unlock');
+    if (un) {
+      const htmlUn = UNLOCKS().map(([need, name]) => row(pop >= need, `${need} người: ${name}`)).join('');
+      if (un._last !== htmlUn) { un.innerHTML = htmlUn; un._last = htmlUn; }
+    }
   }
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function onPanelAct(a) {
@@ -694,6 +886,7 @@ const EXP = (() => {
     migrate, generate, spriteFor, drawObj, drawChild, foodCapBonus, meatMult, buildRadius, bname, bdesc, beds, popText,
     handles, check, assign, ghostFor, placeActions, tileActions, plotSpotAt, buildPanelHTML, autoPanelHTML, updateAutoPanel, onPanelAct,
     tick, overnight, autoSkip, findSpot, findPlotSpot, createPlot,
+    upgradeCost, workMult, chatPair, familyText, objActions, drawFishCarry,
   };
 })();
 window.EXP = EXP;

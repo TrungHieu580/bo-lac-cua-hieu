@@ -13,7 +13,7 @@ const EV = (() => {
 const SIM = (() => {
   const T = CFG.TILE;
   const G = CFG.GATHER;
-  const GKEY = { bush: 'berry', tree: 'wood', boulder: 'stone' };
+  const GKEY = { bush: 'berry', tree: 'wood', boulder: 'stone', fishspot: 'fish' };
   const RES_NAME = { food: 'thức ăn', wood: 'gỗ', stone: 'đá', seeds: 'hạt giống' };
   const rand = () => Math.random();
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -125,6 +125,7 @@ const SIM = (() => {
     if (v.health < 40) f *= 0.8;
     if (v.morale < 30) f *= 0.85;
     if (v._partner) f *= CFG.BOND.closeSpeed;
+    if (window.EXP) f *= EXP.workMult(v, skill);
     return f;
   }
 
@@ -187,7 +188,7 @@ const SIM = (() => {
         const st = WORLD.storage();
         if (st.level >= CFG.STORAGE_CAP.length - 1) return { ok: false, msg: 'Kho đã ở cấp cao nhất' };
         if (!st.upgrading) {
-          const c = CFG.STORAGE_UPGRADE;
+          const c = window.EXP ? EXP.upgradeCost() : CFG.STORAGE_UPGRADE;
           if (S.res.wood < c.wood) return { ok: false, msg: `Cần thêm ${c.wood - S.res.wood} gỗ để nâng cấp kho` };
           if (S.res.stone < c.stone) return { ok: false, msg: `Cần thêm ${c.stone - S.res.stone} đá để nâng cấp kho` };
         }
@@ -239,9 +240,10 @@ const SIM = (() => {
       case 'upgrade': {
         const st = WORLD.storage();
         if (!st.upgrading) {
-          S.res.wood -= CFG.STORAGE_UPGRADE.wood; S.res.stone -= CFG.STORAGE_UPGRADE.stone;
-          st.upgrading = { progress: 0, need: CFG.STORAGE_UPGRADE.hours };
-          log(`Bắt đầu nâng cấp kho (−${CFG.STORAGE_UPGRADE.wood} gỗ, −${CFG.STORAGE_UPGRADE.stone} đá).`);
+          const cu = window.EXP ? EXP.upgradeCost() : CFG.STORAGE_UPGRADE;
+          S.res.wood -= cu.wood; S.res.stone -= cu.stone;
+          st.upgrading = { progress: 0, need: cu.hours };
+          log(`Bắt đầu nâng cấp kho (−${cu.wood} gỗ, −${cu.stone} đá).`);
         }
         for (const v of vs) { clearJob(v); v.job = { type: 'upgrade', target: st.id }; }
         break;
@@ -726,8 +728,9 @@ const SIM = (() => {
   ];
   function onChat() {
     const vs = S.villagers;
-    const a = vs[Math.floor(rand() * vs.length)];
+    let a = vs[Math.floor(rand() * vs.length)];
     let b = vs[Math.floor(rand() * vs.length)];
+    if (window.EXP) { const pr = EXP.chatPair(a, b); a = pr[0]; b = pr[1]; }
     if (a === b) b = vs[(vs.indexOf(a) + 1) % vs.length];
     bondPair(a, b, CFG.BOND.chat);
     vs.forEach(v => v.morale = clamp(v.morale + CFG.MORALE.fire, 0, 100));
@@ -858,7 +861,7 @@ const SIM = (() => {
     if (phase() === 'evening') return t && t.kind === 'sit' ? 'Quây quần bên lửa' : v.carry ? 'Mang đồ về kho' : 'Về bên bếp lửa';
     if (!v.job) return v.carry ? 'Mang đồ về kho' : 'Rảnh rỗi';
     const o = v.job.target ? WORLD.byId(v.job.target) : null;
-    const where = o ? ({ tree: 'cây', bush: 'bụi quả', boulder: 'tảng đá', plot: 'ruộng', site: 'lều', storage: 'kho', huntzone: 'đồng cỏ' }[o.type] || '') : '';
+    const where = o ? ({ tree: 'cây', bush: 'bụi quả', boulder: 'tảng đá', plot: 'ruộng', site: 'lều', storage: 'kho', huntzone: 'đồng cỏ', fishspot: 'bến cá' }[o.type] || '') : '';
     let s = {
       gather: o ? G[GKEY[o.type]]?.label || 'Thu gom' : 'Thu gom', clear: 'Dọn đất', sow: 'Gieo hạt', harvest: 'Thu hoạch',
       build: 'Xây dựng', upgrade: 'Nâng cấp kho', hunt: 'Đi săn', move: 'Di chuyển',

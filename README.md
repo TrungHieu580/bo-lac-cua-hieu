@@ -70,6 +70,9 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Dân số:** mỗi đêm, nếu còn chỗ ngủ trống, thức ăn đủ từ 3 ngày và tinh thần trung bình từ 55, có thể có người lang thang xin gia nhập; cặp thân thiết (gắn kết từ 70) có thể sinh con. Trẻ con lớn sau 4 ngày rồi mới làm việc.
 - **Mở mang:** bản đồ mới 48×36 có bãi cạn qua sông và bãi săn thứ hai bên bờ đông; mở ruộng mới trên bãi cỏ trống; gốc cây mọc thành cây con rồi thành cây; đá tảng mới lộ ra ở nền đá.
 - **Công trình mới:** Giàn phơi thịt (mở khóa khi có 7 người: +30 sức chứa thức ăn, thịt săn +25%), Kho lương (9 người: +60 sức chứa thức ăn), Nhà dài (10 người: chỗ ngủ cho 6). Dân làng đi xuyên qua mọi công trình nên không bị kẹt.
+- **Kho nhiều cấp:** kho có 4 cấp (sức chứa 40 → 100 → 180 → 300 mỗi loại). Khi gỗ, đá hoặc thức ăn đầy từ 90%, làng ưu tiên nâng cấp kho trước mọi việc xây khác.
+- **Gia đình:** mỗi người có giới tính. Nam và nữ gắn kết từ 60 sẽ nên duyên vợ chồng; người vợ có thể mang thai (3 ngày, làm việc chậm hơn, không đi săn) rồi sinh con. Bảng Dân làng ghi bạn đời, đang mang thai, con của ai.
+- **Mở khóa theo dân số:** 7 người — Giàn phơi thịt; 8 — Câu cá (bến cá dọc bờ sông, mỗi đêm cá hồi lại); 9 — Kho lương; 10 — Nhà dài và Lễ hội lửa trại mỗi 7 ngày (tốn thức ăn, tăng mạnh tinh thần và gắn kết); 12 — Lều thảo dược (mọi người hồi thêm sức khỏe mỗi đêm); 14 — Xưởng chế tác (xây dựng, đốn gỗ, nhặt đá nhanh hơn 20%). Dân số tối đa 40.
 - Bản lưu cũ vẫn chơi tiếp được trên bản đồ cũ 36×28 với đầy đủ tính năng mới; chọn **Chơi mới** để có bản đồ lớn.
 
 ## Mở rộng sau bản đầu
