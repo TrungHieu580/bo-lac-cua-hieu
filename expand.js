@@ -13,14 +13,15 @@ const EXP = (() => {
   const pick = (a) => a[Math.floor(rand() * a.length)];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const SK = CFG.SKILL_NAMES;
-  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop'];
+  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop', 'watchtower'];
   const DESC = {
     hut: `Chỗ ngủ cho ${CFG.HUT.sleepers} người, hồi phục tốt hơn.`,
     rack: `+${B.rack.foodCap} sức chứa thức ăn, thịt săn được +${Math.round(B.rack.meatBonus * 100)}%.`,
     granary: `+${B.granary.foodCap} sức chứa thức ăn.`,
     longhouse: `Chỗ ngủ cho ${B.longhouse.beds} người.`,
     healer: `Mỗi đêm mọi người hồi thêm ${CFG.HEALER.heal} sức khỏe, vết thương mau lành.`,
-    workshop: `Công cụ tốt hơn: xây dựng, đốn gỗ, nhặt đá nhanh hơn ${Math.round((CFG.WORKSHOP.buildBonus - 1) * 100)}%.`,
+    workshop: `Công cụ tốt hơn: xây dựng, đốn gỗ, nhặt đá nhanh hơn ${Math.round((CFG.WORKSHOP.buildBonus - 1) * 100)}%; chế giáo đá nhanh hơn.`,
+    watchtower: `Người canh gác đứng gác ở đây; phát hiện thú dữ từ xa để dân kịp chạy về bếp lửa, người gác đánh mạnh hơn ${Math.round((CFG.DEFENSE.towerBonus - 1) * 100)}% khi ở gần chòi.`,
   };
 
   // ---------------- TIỆN ÍCH ----------------
@@ -52,6 +53,7 @@ const EXP = (() => {
     if (s.pop.lastFestival === undefined) s.pop.lastFestival = 0;
     if (!s.pop.unlocked) s.pop.unlocked = {};
     if (s.planNote === undefined) s.planNote = '';
+    if (window.DEF) DEF.migrate(s);
   }
 
   // ---------------- SPRITE MỚI ----------------
@@ -133,12 +135,13 @@ const EXP = (() => {
     }
     return SP;
   }
-  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; return sprites()[k] || ART.SPR.hut; }
+  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; return sprites()[k] || ART.SPR.hut; }
 
   function drawObj(o, X, Y, lx) {
     const sp = sprites();
     if (o.type === 'sapling') return () => lx.drawImage(sp.sapling, X + 5, Y + T - 16);
     if (o.type === 'fishspot') return () => drawFishspot(o, X, Y, lx);
+    if (o.type === 'watchtower' && window.DEF) { const s = DEF.SPR.watchtower; return () => lx.drawImage(s, X, Y + o.h * T - s.height + 2); }
     if (sp[o.type] && (o.type === 'rack' || o.type === 'granary' || o.type === 'longhouse' || o.type === 'healer' || o.type === 'workshop')) {
       const s = sp[o.type];
       return () => lx.drawImage(s, X, Y + o.h * T - s.height + 2);
@@ -464,6 +467,7 @@ const EXP = (() => {
       else if (coupleCount() > count('hut')) { want = 'hut'; S.planNote = 'Vợ chồng cần lều riêng để ngủ chung'; }
       else if (st.level === 0 && pop >= 8) want = 'upgrade';
       else if (unlocked('rack') && count('rack') < (pop >= 14 ? 2 : 1)) want = 'rack';
+      else if (unlocked('watchtower') && count('watchtower') < (pop >= 20 ? 2 : 1) && S.def && S.def.attacks > 0) want = 'watchtower';
       else if (unlocked('granary') && count('granary') < (pop >= 18 ? 2 : 1)) want = 'granary';
       else if (unlocked('healer') && count('healer') < 1) want = 'healer';
       else if (unlocked('workshop') && count('workshop') < 1) want = 'workshop';
@@ -540,6 +544,7 @@ const EXP = (() => {
     if (tree) push(ctx.woodW, 'build', 'build', { type: 'gather', target: tree.id });
     const rock = nearest(v, S.objects.filter(o => o.type === 'boulder' && !isBad(o.id) && workers(o.id) < 2));
     if (rock) push(ctx.stoneW, 'build', 'build', { type: 'gather', target: rock.id });
+    if (window.DEF) DEF.options(v, push);
     return out;
   }
 
@@ -557,6 +562,7 @@ const EXP = (() => {
     for (const v of S.villagers) {
       if (v.job && v.job.auto && S.hour > (v.job.until || 99) && (!v.task || v.task.kind !== 'work') && !v.carry) { v.job = null; v.task = null; }
     }
+    if (window.DEF) DEF.autoGuards();
     const idle = S.villagers.filter(v => !v.child && !v.job && !v.resting);
     if (!idle.length) return;
     const ctx = context();
@@ -600,10 +606,10 @@ const EXP = (() => {
     return v;
   }
   function newcomer() {
-    const counts = { hunt: 0, gather: 0, build: 0, farm: 0 };
+    const counts = { hunt: 0, gather: 0, build: 0, farm: 0, guard: 0 };
     adults().forEach(a => counts[a.main]++);
     const main = Object.keys(counts).sort((a, b) => counts[a] - counts[b] + (rand() - 0.5))[0];
-    const skills = { hunt: 1 + Math.floor(rand() * 3), gather: 1 + Math.floor(rand() * 3), build: 1 + Math.floor(rand() * 3), farm: 1 + Math.floor(rand() * 3) };
+    const skills = { hunt: 1 + Math.floor(rand() * 3), gather: 1 + Math.floor(rand() * 3), build: 1 + Math.floor(rand() * 3), farm: 1 + Math.floor(rand() * 3), guard: 1 + Math.floor(rand() * 3) };
     skills[main] = 4 + (rand() < 0.4 ? 1 : 0);
     const f = WORLD.fire();
     const tile = WORLD.nearestMain(Math.max(0, f.x - 12), f.y + 1);
@@ -615,7 +621,7 @@ const EXP = (() => {
   function birth(a, b) {
     const main = rand() < 0.5 ? a.main : b.main;
     const skills = {};
-    for (const k of ['hunt', 'gather', 'build', 'farm']) skills[k] = clamp(Math.round((a.skills[k] + b.skills[k]) / 2 + (rand() - 0.5) * 2), 1, 5);
+    for (const k of ['hunt', 'gather', 'build', 'farm', 'guard']) skills[k] = clamp(Math.round(((a.skills[k] || 1) + (b.skills[k] || 1)) / 2 + (rand() - 0.5) * 2), 1, 5);
     skills[main] = Math.max(skills[main], 4);
     const f = WORLD.fire();
     const tile = WORLD.nearestMain(f.x, f.y + 1);
@@ -724,7 +730,7 @@ const EXP = (() => {
   const UNLOCKS = () => [
     [B.rack.unlock, B.rack.name], [CFG.FISH.unlock, 'Câu cá bên sông'], [B.granary.unlock, B.granary.name],
     [B.longhouse.unlock, B.longhouse.name], [CFG.FESTIVAL.unlock, `Lễ hội lửa trại (mỗi ${CFG.FESTIVAL.everyDays} ngày)`],
-    [B.healer.unlock, B.healer.name], [B.workshop.unlock, B.workshop.name],
+    [B.healer.unlock, B.healer.name], [B.workshop.unlock, B.workshop.name], [B.watchtower.unlock, B.watchtower.name],
   ].sort((a, b) => a[0] - b[0]);
   function unlocks() {
     const pop = S.villagers.length;
@@ -784,7 +790,9 @@ const EXP = (() => {
       const g = CFG.GATHER.fish;
       return { title: 'Bến cá', desc: o.stock > 0 ? `Còn khoảng ${o.stock} con cá · mỗi đêm hồi ${g.regen}` : 'Cá tạm hết, mai quay lại', actions: [{ spec: { type: 'gather', target: o.id }, label: 'Câu cá', detail: `Mỗi chuyến ≈ ${g.hours} giờ: +${g.perTrip} thức ăn · dùng kỹ năng Hái lượm` }] };
     }
-    if (o.type === 'healer' || o.type === 'workshop') return { title: bname(o.type), desc: bdesc(o.type), actions: [] };
+    if (o.type === 'healer') return { title: bname(o.type), desc: bdesc(o.type), actions: [] };
+    if (o.type === 'workshop') return { title: bname(o.type), desc: bdesc(o.type), actions: window.DEF ? [DEF.craftAction()] : [] };
+    if (o.type === 'watchtower') return { title: bname(o.type), desc: bdesc(o.type), actions: [{ spec: { type: 'guard' }, label: 'Canh gác ở chòi', detail: 'Người được chọn thành người canh gác, đứng gác ở chòi và tự lao ra đánh thú dữ.' }] };
     if (o.type === 'storage') {
       const maxL = CFG.STORAGE_CAP.length - 1, u = upgradeCost();
       const out = { title: `Kho chung (cấp ${o.level + 1}/${maxL + 1})`, desc: `Sức chứa ${SIM.cap('wood')} gỗ/đá, ${SIM.cap('food')} thức ăn · đang có: thức ăn ${S.res.food}, gỗ ${S.res.wood}, đá ${S.res.stone}, hạt ${S.res.seeds}. Làng tự nâng cấp khi kho gần đầy.`, actions: [] };
@@ -841,6 +849,7 @@ const EXP = (() => {
         <button class="btn ${S.autoSkipNight ? 'go' : ''}" data-act="ex-skip">${S.autoSkipNight ? 'Đang bật' : 'Đang tắt'}</button></div>
       <div class="jsec"><h4>Kế hoạch của làng</h4><div id="ex-plan" class="sheet-sub"></div></div>
       <div class="jsec"><h4>Dân số & gia đình</h4><div id="ex-pop" class="sheet-sub"></div></div>
+      ${window.DEF ? DEF.panelHTML() : ''}
       <div class="jsec"><h4>Mở khóa theo dân số</h4><div id="ex-unlock" class="sheet-sub"></div></div>`;
   }
   function updateAutoPanel(p) {
@@ -867,6 +876,7 @@ const EXP = (() => {
       ${row(couples.length > 0, `Vợ chồng: ${couples.length ? couples.join(', ') : `chưa có (nam và nữ gắn kết từ ${CFG.FAMILY.coupleBond} sẽ nên duyên)`}`)}
       ${row(!couples.length || count('hut') >= couples.length, `Lều riêng cho vợ chồng: ${count('hut')}/${couples.length} — vợ chồng phải cùng vào một lều riêng ban đêm mới có thể có con`)}`;
     if (popEl._last !== htmlPop) { popEl.innerHTML = htmlPop; popEl._last = htmlPop; }
+    if (window.DEF) DEF.updatePanel(p);
     const un = p.querySelector('#ex-unlock');
     if (un) {
       const htmlUn = UNLOCKS().map(([need, name]) => row(pop >= need, `${need} người: ${name}`)).join('');

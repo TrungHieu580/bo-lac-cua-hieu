@@ -73,12 +73,12 @@ window.CFG = {
 
   // Sáu thành viên khởi đầu (hư cấu)
   MEMBERS: [
-    { name: 'Hiếu',  main: 'build',  skills: { hunt: 2, gather: 2, build: 5, farm: 3 }, hair: '#2a1810', tunic: '#9c5b2e', band: '#f2c94c', skin: '#d9a273' },
-    { name: 'Đá',    main: 'hunt',   skills: { hunt: 5, gather: 1, build: 3, farm: 1 }, hair: '#1b1b1b', tunic: '#6e4a2a', band: '#e05a3a', skin: '#c88b5c' },
-    { name: 'Gió',   main: 'hunt',   skills: { hunt: 4, gather: 2, build: 2, farm: 2 }, hair: '#5a3a1e', tunic: '#7d6a3c', band: '#4fb0e0', skin: '#e0ae80' },
-    { name: 'Mây',   main: 'gather', skills: { hunt: 1, gather: 5, build: 2, farm: 3 }, hair: '#3a2416', tunic: '#a8743c', band: '#e86fb0', skin: '#e6b48a' },
-    { name: 'Nụ',    main: 'gather', skills: { hunt: 2, gather: 4, build: 1, farm: 3 }, hair: '#7a4a24', tunic: '#8c5a3a', band: '#9be067', skin: '#d8a070' },
-    { name: 'Sương', main: 'farm',   skills: { hunt: 1, gather: 3, build: 2, farm: 5 }, hair: '#e8e0d0', tunic: '#5f6e3a', band: '#f0f0f0', skin: '#dcaa7c' },
+    { name: 'Hiếu',  main: 'build',  skills: { hunt: 2, gather: 2, build: 5, farm: 3, guard: 2 }, hair: '#2a1810', tunic: '#9c5b2e', band: '#f2c94c', skin: '#d9a273' },
+    { name: 'Đá',    main: 'hunt',   skills: { hunt: 5, gather: 1, build: 3, farm: 1, guard: 4 }, hair: '#1b1b1b', tunic: '#6e4a2a', band: '#e05a3a', skin: '#c88b5c' },
+    { name: 'Gió',   main: 'hunt',   skills: { hunt: 4, gather: 2, build: 2, farm: 2, guard: 3 }, hair: '#5a3a1e', tunic: '#7d6a3c', band: '#4fb0e0', skin: '#e0ae80' },
+    { name: 'Mây',   main: 'gather', skills: { hunt: 1, gather: 5, build: 2, farm: 3, guard: 1 }, hair: '#3a2416', tunic: '#a8743c', band: '#e86fb0', skin: '#e6b48a' },
+    { name: 'Nụ',    main: 'gather', skills: { hunt: 2, gather: 4, build: 1, farm: 3, guard: 2 }, hair: '#7a4a24', tunic: '#8c5a3a', band: '#9be067', skin: '#d8a070' },
+    { name: 'Sương', main: 'farm',   skills: { hunt: 1, gather: 3, build: 2, farm: 5, guard: 1 }, hair: '#e8e0d0', tunic: '#5f6e3a', band: '#f0f0f0', skin: '#dcaa7c' },
   ],
   START_BONDS: [ ['Đá', 'Gió', 62], ['Mây', 'Nụ', 55], ['Hiếu', 'Sương', 50] ], // các cặp khác: 25–45
 
@@ -100,9 +100,37 @@ window.CFG = {
     longhouse: { name: 'Nhà dài',        w: 3, h: 2, wood: 18, stone: 10, hours: 16, unlock: 10, beds: 6 },
     healer:    { name: 'Lều thảo dược',  w: 2, h: 2, wood: 10, stone: 6,  hours: 10, unlock: 12, max: 1 },
     workshop:  { name: 'Xưởng chế tác',  w: 2, h: 2, wood: 14, stone: 10, hours: 12, unlock: 14, max: 1 },
+    watchtower: { name: 'Chòi canh',     w: 2, h: 2, wood: 8,  stone: 4,  hours: 8,  unlock: 8,  max: 2 },
+  },
+
+  // Dụng cụ săn bắn: giáo đá — chế ở bếp lửa (hoặc xưởng chế tác, nhanh hơn)
+  TOOLS: {
+    spear: { wood: 2, stone: 1, hours: 1.5 },
+    cap: 10,               // sức chứa giáo (+4 mỗi cấp kho)
+    workshopSpeed: 1.6,
+    huntChance: 0.05,      // mỗi người cầm giáo khi đi săn: +5% tỉ lệ thành công
+    huntMeat: 0.1,         // +10% thịt
+    huntInjury: 0.04,      // −4% nguy cơ bị thương
+    breakHunt: 0.15,       // khả năng gãy giáo sau mỗi chuyến săn
+    breakFight: 0.1,       // khả năng gãy giáo sau mỗi trận đánh thú dữ
+  },
+  // Thú dữ tấn công làng & người canh gác
+  DEFENSE: {
+    startDay: 3, chance: 0.3, perDay: 0.02, maxChance: 0.65, hourFrom: 8, hourTo: 15.5,
+    guardsAt: [[7, 1], [14, 2], [24, 3]], // dân số → số người canh gác làng tự cử
+    militiaSkill: 3,       // người có kỹ năng Bảo vệ từ mức này sẽ ra giúp khi thiếu người gác
+    baseDmg: 1.5, perSkill: 1.2, spearMult: 1.7, towerBonus: 1.25, towerRange: 9,
+    atkEvery: 0.4,         // thú cắn mỗi 0,4 giờ
+    fireSafe: 2.6,         // thú (trừ gấu) không dám lại gần bếp lửa trong bán kính này (ô)
+    fleeRadius: 5, towerFleeRadius: 8, giveUp: 3.5, skillUpChance: 0.35,
+  },
+  BEASTS: {
+    wolf:  { name: 'Sói', hp: 10, dmg: 7,  speed: 25, meat: 4,  minDay: 3,  weight: 5, target: 'people' },
+    bear:  { name: 'Gấu', hp: 24, dmg: 11, speed: 15, meat: 10, minDay: 7,  weight: 3, target: 'food', steal: 5, bold: true },
+    tiger: { name: 'Hổ',  hp: 26, dmg: 15, speed: 23, meat: 8,  minDay: 12, weight: 2, target: 'people' },
   },
   NAMES: ['Sông', 'Núi', 'Lá', 'Hoa', 'Trăng', 'Sao', 'Cỏ', 'Suối', 'Rêu', 'Mưa', 'Bão', 'Lửa', 'Ong', 'Sóc', 'Cò', 'Én', 'Tre', 'Mận',
     'Đào', 'Lúa', 'Mầm', 'Khói', 'Thác', 'Hạt', 'Gấu', 'Nai', 'Bông', 'Cát', 'Rừng', 'Đồi', 'Nắng', 'Hồ', 'Sen', 'Cúc', 'Vàng', 'Mai'],
 
-  SKILL_NAMES: { hunt: 'Săn bắt', gather: 'Hái lượm', build: 'Xây dựng', farm: 'Canh tác' },
+  SKILL_NAMES: { hunt: 'Săn bắt', gather: 'Hái lượm', build: 'Xây dựng', farm: 'Canh tác', guard: 'Bảo vệ' },
 };

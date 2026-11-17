@@ -34,6 +34,7 @@ const UI = (() => {
         <span class="res" title="Gỗ">${ic('wood')}<b id="r-wood">0</b></span>
         <span class="res" title="Đá">${ic('stone')}<b id="r-stone">0</b></span>
         <span class="res" title="Hạt giống">${ic('seeds')}<b id="r-seeds">0</b></span>
+        <span class="res" title="Giáo đá — dụng cụ săn bắn và đánh thú dữ">${ic('spear')}<b id="r-spear">0</b></span>
       </div>`;
   }
   function updateTop() {
@@ -51,6 +52,7 @@ const UI = (() => {
     $('#r-wood').textContent = S.res.wood;
     $('#r-stone').textContent = S.res.stone;
     $('#r-seeds').textContent = S.res.seeds;
+    const rs = $('#r-spear'); if (rs) { rs.textContent = S.res.spears || 0; rs.parentNode.classList.toggle('alarm', !!(S.beasts && S.beasts.some(b => b.state !== 'flee'))); }
     const pb = $('#b-pause');
     pb.innerHTML = state.paused ? `<span class="bi">▶</span><span>Tiếp tục</span>` : `<span class="bi">❚❚</span><span>Tạm dừng</span>`;
     $('#b-speed').innerHTML = `<span class="bi">»</span><span>x${S.speed}</span>`;
@@ -299,12 +301,13 @@ const UI = (() => {
         out.title = 'Bếp lửa trung tâm';
         out.desc = `Mỗi tối ${fmtH(CFG.MEAL)} cả bộ lạc ăn ở đây (${S.villagers.length} khẩu phần/tối).`;
         out.actions.push({ spec: { type: 'rest' }, label: 'Nghỉ bên lửa', detail: `Hồi ${CFG.ENERGY.restRegen} năng lượng/giờ, nghỉ tới khi gần đầy.` });
+        if (window.DEF) DEF.fireActions(out, n);
         break;
       }
       case 'huntzone': {
         out.title = 'Bãi săn — đồng cỏ';
         out.desc = `Thú còn trong khu vực: ${o.animals}/${CFG.HUNT.animalsMax} (hồi ${CFG.HUNT.animalsRegen}/ngày).`;
-        out.actions.push({ spec: { type: 'hunt', target: o.id }, label: 'Cử nhóm săn', detail: `Ít nhất ${CFG.HUNT.minMembers} người · săn ${hrs(CFG.HUNT.hours)} tại bãi + đường đi · thịt chỉ vào kho khi mang về`, hunt: true });
+        out.actions.push({ spec: { type: 'hunt', target: o.id }, label: 'Cử nhóm săn', detail: `Ít nhất ${CFG.HUNT.minMembers} người · săn ${hrs(CFG.HUNT.hours)} tại bãi + đường đi · thịt chỉ vào kho khi mang về${S.res.spears ? ` · mang theo giáo đá (có ${S.res.spears}): dễ thành công, nhiều thịt, ít bị thương hơn` : ' · chưa có giáo đá — chế giáo ở bếp lửa để săn tốt hơn'}`, hunt: true });
         break;
       }
     }
@@ -462,7 +465,8 @@ const UI = (() => {
         <li><b>Chọn dân làng:</b> chạm/bấm vào nhân vật. Mở bảng <b>Dân làng</b> để chọn nhiều người (giao việc nhóm). Máy tính: giữ Shift để chọn thêm.</li>
         <li><b>Chọn mục tiêu:</b> bụi quả → <b>Hái quả</b>; cây → <b>Đốn gỗ</b>; tảng đá → <b>Nhặt đá</b>; đồng cỏ có hươu → <b>Cử nhóm săn</b>; ruộng đất hoang → <b>Dọn đất</b> → <b>Gieo hạt</b> → <b>Thu hoạch</b>; ô trống gần trại → <b>Xây lều</b>.</li>
         <li>Nhân vật tự tìm đường, làm việc và mang đồ về kho. Tài nguyên chỉ được cộng khi mang về tới kho.</li>
-        <li>18:00 mọi người về bếp lửa, 19:00 mỗi người ăn 1 khẩu phần, 21:00 ngủ và xem nhật ký. Lều giúp hồi phục tốt hơn.</li>
+        <li>18:00 mọi người về bếp lửa, 19:00 mỗi người ăn 1 khẩu phần, 20:30 ai về lều nấy ngủ (Zzz trên lều). Vợ chồng ngủ chung một lều riêng (trái tim trên lều) mới có thể có con.</li>
+        <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
         <li><b>Camera:</b> kéo để di chuyển, cuộn chuột / chụm hai ngón để phóng to. Phím: WASD/mũi tên, Space tạm dừng, 1-2-3 tốc độ, B xây dựng, V dân làng, J nhật ký, Esc đóng.</li>
       </ol>
       <h4>Mục tiêu đến hết ngày ${CFG.GOAL.day}</h4>

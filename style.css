@@ -30,6 +30,8 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; col
 .res { display: inline-flex; align-items: center; gap: 3px; background: rgba(0,0,0,.22); padding: 2px 6px; border-radius: 5px; }
 .res b { font-variant-numeric: tabular-nums; min-width: 14px; }
 .res small { font-size: 11px; opacity: .85; }
+.res.alarm { background: rgba(200,40,40,.75); animation: alarm 0.8s infinite alternate; }
+@keyframes alarm { from { box-shadow: 0 0 0 0 rgba(255,80,60,.6); } to { box-shadow: 0 0 6px 2px rgba(255,80,60,.9); } }
 .ico { width: 20px; height: 20px; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; flex: none; }
 
 /* ---- Khung bản đồ ---- */

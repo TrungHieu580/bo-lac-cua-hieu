@@ -151,6 +151,7 @@ const SIM = (() => {
     vs = vs || [];
     if (!['rest', 'cancel'].includes(spec.type) && vs.some(v => v.child)) return { ok: false, msg: 'Trẻ con chưa thể làm việc' };
     if (window.EXP && EXP.handles(spec.type)) return EXP.check(spec, vs);
+    if (window.DEF && DEF.handles(spec.type)) return DEF.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
     const needPeople = (n) => vs.length < n ? (n - vs.length === 1 ? `Cần thêm một thành viên` : `Cần thêm ${n - vs.length} thành viên`) : null;
@@ -222,6 +223,7 @@ const SIM = (() => {
     const c = check(spec, vs);
     if (!c.ok) return c;
     if (window.EXP && EXP.handles(spec.type)) return EXP.assign(spec, vs, c);
+    if (window.DEF && DEF.handles(spec.type)) return DEF.assign(spec, vs);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
       c.later = true;
@@ -318,9 +320,11 @@ const SIM = (() => {
     max = Math.max(2, Math.round(max * Math.min(1, (zone ? zone.animals : 0) / 3)));
     const min = Math.max(1, Math.round(max * 0.6));
     const injury = clamp(H.injuryBase - H.injuryPerSkill * sk + (S.weather === 'rain' ? H.injuryRain : 0) - (n - 2) * 0.03, 0.02, 0.6);
-    const score = injury + (1 - chance) * 0.5;
-    const risk = score < 0.3 ? 'Thấp' : score < 0.45 ? 'Vừa' : 'Cao';
-    return { chance, min, max, injury, risk, n };
+    const est = { chance, min, max, injury, n };
+    if (window.DEF) DEF.huntMod(est, vs);
+    const score = est.injury + (1 - est.chance) * 0.5;
+    est.risk = score < 0.3 ? 'Thấp' : score < 0.45 ? 'Vừa' : 'Cao';
+    return est;
   }
 
   function huntMembers(h) { return h.members.map(vById).filter(v => v && v.job && v.job.type === 'hunt' && v.job.hunt === h.id); }
@@ -366,6 +370,7 @@ const SIM = (() => {
       }
       v.job = null; v.task = null;
     }
+    if (window.DEF) DEF.afterHunt(vs);
     bondGroup(vs, 3);
     S.hunts = S.hunts.filter(x => x !== h);
   }
@@ -506,6 +511,7 @@ const SIM = (() => {
   }
 
   function plan(v) {
+    if (window.DEF && DEF.preplan(v)) return;
     if (v.child && phase() !== 'evening') { if (v.carry) return goDeposit(v); return idle(v); }
     if (phase() === 'evening') {
       if (v.carry) return goDeposit(v);
@@ -581,6 +587,7 @@ const SIM = (() => {
         return;
       }
     }
+    if (window.DEF && DEF.planJob(v, j)) return;
     v.job = null;
   }
 
@@ -746,7 +753,7 @@ const SIM = (() => {
         t.time -= dt;
         if (t.time <= 0 || v.job) v.task = null;
         break;
-      default: v.task = null;
+      default: if (!(window.DEF && DEF.task(v, t, dt))) v.task = null;
     }
   }
 
@@ -867,6 +874,7 @@ const SIM = (() => {
       delete v._hut;
     }
     if (window.EXP) EXP.overnight();
+    if (window.DEF) DEF.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
     EV.emit('newDay');
@@ -884,6 +892,7 @@ const SIM = (() => {
     for (const v of S.villagers) updateVillager(v, dt);
     updateHunts(dt);
     if (window.EXP) EXP.tick(dt);
+    if (window.DEF) DEF.tick(dt);
     if (S.hour >= CFG.DAY_END && (S.hour >= CFG.NIGHT_MAX || S.villagers.every(asleep))) endDay();
   }
 
@@ -928,6 +937,8 @@ const SIM = (() => {
     if (t0 && t0.kind === 'sleep') { const h = WORLD.byId(v.inside); return h && h.type === 'longhouse' ? 'Đang ngủ trong nhà dài' : 'Đang ngủ trong lều'; }
     if (t0 && t0.kind === 'sleepout') return 'Ngủ ngoài trời bên lửa (thiếu chỗ ngủ)';
     if (bedtime() && v.bed && !v.carry) return 'Đang về lều ngủ';
+    const dj = window.DEF && DEF.jobText(v);
+    if (dj) return dj;
     if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';
     const t = v.task;
@@ -959,12 +970,12 @@ const SIM = (() => {
       if (t.mode === 'upgrade') return o.upgrading ? o.upgrading.progress / o.upgrading.need : 1;
     }
     if (t.kind === 'hunting') { const h = S.hunts.find(x => x.id === v.job?.hunt); return h ? h.progress / CFG.HUNT.hours : null; }
-    return null;
+    return window.DEF ? DEF.taskProgress(v) : null;
   }
 
   return {
     newGame, tick, step, save, load, hasSave, clearSave, assign, check, huntEstimate, validHutSpot,
     evalGoals, foodDays, hutCount, jobText, taskProgress, coworkers, startNewDay, phase, cap, tileOf, vById, log, event, unstickAll, GKEY,
-    bedtime, assignBeds, doorTiles,
+    bedtime, assignBeds, doorTiles, goTo, isAt, workSpeed,
   };
 })();

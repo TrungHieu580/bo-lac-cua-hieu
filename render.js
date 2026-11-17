@@ -103,7 +103,8 @@ const RENDER = (() => {
     const t = v.task;
     if (!t) return 'stand';
     if (t.kind === 'walk') return 'walk';
-    if (t.kind === 'work' || t.kind === 'hunting') return 'work';
+    if (t.kind === 'work' || t.kind === 'hunting' || t.kind === 'fight' || t.kind === 'craft') return 'work';
+    if (t.kind === 'cower') return 'sit';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
   }
@@ -219,6 +220,7 @@ const RENDER = (() => {
       if (v.inside) continue; // đang ngủ trong lều: không nhìn thấy
       list.push([v.y, () => drawVillagerAt(v, false)]);
     }
+    if (window.DEF) DEF.pushDraw(list, lx, L, Tp, time, shadow);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 
@@ -252,6 +254,7 @@ const RENDER = (() => {
         if (ui.selected.has(v.id)) { ring(lx, X, Y, 7, 3, '#ffe14a'); ring(lx, X, Y + 1, 7, 3, '#b8860b'); }
       }
       (v.child ? EXP.drawChild : ART.drawVillager)(lx, X, Y, v, time + v.id * 0.37, pose, pose === 'sit' ? 0 : v.facing, ghost ? 0.4 : undefined);
+      if (!ghost && window.DEF) DEF.drawGear(lx, X, Y, v, pose);
       if (v.carry && !ghost) {
         if (v.carry.vis === 'fish') EXP.drawFishCarry(lx, X, Y);
         else {
@@ -400,6 +403,7 @@ const RENDER = (() => {
         ctx.fillText('z', sx + 6 * dpr, sy + b); ctx.fillText('Z', sx + 10 * dpr, sy - 7 * dpr + b);
       }
     }
+    if (window.DEF) DEF.overlay(ctx, W, dpr, bar, time);
     // số bay lên
     for (let i = floats.length - 1; i >= 0; i--) {
       const f = floats[i];
