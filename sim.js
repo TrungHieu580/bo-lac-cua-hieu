@@ -441,6 +441,61 @@ const SIM = (() => {
     if (isAt(v, ring)) { v.task = { kind: 'deposit' }; return; }
     if (!goTo(v, ring, { kind: 'deposit' })) { v.task = { kind: 'idle', time: 0.5 }; v.note = 'Không có đường tới kho'; }
   }
+  // ---------------- NGỦ TRONG LỀU ----------------
+  const bedtime = () => S.hour >= CFG.BEDTIME;
+  function bedsOf(h) { return h.type === 'longhouse' ? CFG.BUILDINGS.longhouse.beds : CFG.HUT.sleepers; }
+  function doorTiles(h) {
+    const y = h.y + h.h - 1;
+    return h.w >= 3 ? [[h.x + 1, y]] : [[h.x, y], [h.x + 1, y]];
+  }
+  // Chia chỗ ngủ: mỗi cặp vợ chồng một lều riêng, con nhỏ ngủ cùng cha mẹ, người còn lại vào lều chung / nhà dài
+  function assignBeds() {
+    const huts = S.objects.filter(o => o.type === 'hut' || o.type === 'longhouse');
+    const free = new Map(huts.map(h => [h.id, bedsOf(h)]));
+    const occ = new Map(huts.map(h => [h.id, 0]));
+    const put = (v, h) => { v.bed = h.id; free.set(h.id, free.get(h.id) - 1); occ.set(h.id, occ.get(h.id) + 1); };
+    S.villagers.forEach(v => { v.bed = 0; });
+    const coupleHut = new Set();
+    for (const f of S.villagers.filter(v => !v.child && v.partner && v.sex === 'f')) {
+      const m = vById(f.partner);
+      if (!m || m.bed || f.bed) continue;
+      const h = huts.find(h => h.type === 'hut' && occ.get(h.id) === 0 && free.get(h.id) >= 2);
+      if (!h) continue;
+      put(m, h); put(f, h); coupleHut.add(h.id);
+    }
+    for (const c of S.villagers.filter(v => v.child && !v.bed && v.parents)) {
+      for (const pid of c.parents) { const p = vById(pid); if (p && p.bed && free.get(p.bed) > 0) { put(c, WORLD.byId(p.bed)); break; } }
+    }
+    const order = huts.slice().sort((a, b) => (coupleHut.has(a.id) ? 1 : 0) - (coupleHut.has(b.id) ? 1 : 0));
+    for (const v of S.villagers.filter(v => !v.bed).sort((a, b) => a.energy - b.energy)) {
+      const h = order.find(h => free.get(h.id) > 0);
+      if (h) put(v, h);
+    }
+  }
+  function goBed(v) {
+    if (v.bed === undefined) assignBeds();
+    const h = v.bed ? WORLD.byId(v.bed) : null;
+    if (!h) return goFire(v, 'sleepout');
+    const doors = doorTiles(h), next = { kind: 'enter', hut: h.id };
+    if (isAt(v, doors)) { v.task = next; return; }
+    if (!goTo(v, doors, next)) v.task = next; // không tìm được đường thì vẫn cho vào lều
+  }
+  // Những cặp vợ chồng đã thật sự cùng vào một lều riêng (không có người lớn nào khác) trong đêm
+  function nightCouples() {
+    const out = [];
+    for (const f of S.villagers) {
+      if (f.child || f.sex !== 'f' || !f.partner || !f.inside) continue;
+      const m = vById(f.partner);
+      if (!m || m.inside !== f.inside) continue;
+      const h = WORLD.byId(f.inside);
+      if (!h || h.type !== 'hut') continue;
+      if (S.villagers.some(o => o !== f && o !== m && !o.child && o.inside === f.inside)) continue;
+      out.push([m.id, f.id]);
+    }
+    return out;
+  }
+  const asleep = (v) => v.task && (v.task.kind === 'sleep' || v.task.kind === 'sleepout');
+
   function idle(v) {
     const f = WORLD.fire();
     for (let k = 0; k < 6; k++) {
@@ -454,6 +509,7 @@ const SIM = (() => {
     if (v.child && phase() !== 'evening') { if (v.carry) return goDeposit(v); return idle(v); }
     if (phase() === 'evening') {
       if (v.carry) return goDeposit(v);
+      if (bedtime()) return goBed(v);
       return goFire(v, 'sit');
     }
     if (v.health < CFG.HEALTH.sickAt && v.restKind !== 'sick') {
@@ -679,6 +735,12 @@ const SIM = (() => {
         v.energy = clamp(v.energy + E.idleRegen * dt, 0, 100);
         if (t.kind === 'sit' && phase() === 'day') v.task = null;
         break;
+      case 'enter':
+        v.inside = t.hut; v.task = { kind: 'sleep' };
+        break;
+      case 'sleep': case 'sleepout':
+        v.energy = clamp(v.energy + E.idleRegen * dt, 0, 100);
+        break;
       case 'idle':
         v.energy = clamp(v.energy + E.idleRegen * dt, 0, 100);
         t.time -= dt;
@@ -696,6 +758,13 @@ const SIM = (() => {
     for (const v of S.villagers) if (v.task && v.task.kind !== 'deposit') v.task = null;
     log('Chiều tối — cả bộ lạc quây quần về bên bếp lửa.');
     EV.emit('toast', 'Chiều tối — mọi người về bên bếp lửa');
+  }
+
+  function onBedtime() {
+    assignBeds();
+    for (const v of S.villagers) if (v.task && v.task.kind !== 'deposit') v.task = null;
+    const out = S.villagers.filter(v => !v.bed).length;
+    log(out ? `Đêm xuống — mọi người về lều ngủ; ${out} người không còn chỗ phải ngủ ngoài trời bên lửa.` : 'Đêm xuống — mọi người về lều của mình để ngủ.');
   }
 
   function onMeal() {
@@ -739,7 +808,6 @@ const SIM = (() => {
   }
 
   function endDay() {
-    S.hour = CFG.DAY_END;
     const goals = evalGoals();
     const j = {
       day: S.day, ...JSON.parse(JSON.stringify(S.today)), weather: S.weather, forecast: S.forecast,
@@ -755,20 +823,19 @@ const SIM = (() => {
   function startNewDay() {
     if (!S.dayEndPending) return;
     S.dayEndPending = false;
-    // Ngủ: lều chứa CFG.HUT.sleepers người mỗi lều, ưu tiên người mệt nhất
-    const huts = S.objects.filter(o => o.type === 'hut' || o.type === 'longhouse');
-    const beds = [];
-    huts.forEach(h => { const n = h.type === 'longhouse' ? CFG.BUILDINGS.longhouse.beds : CFG.HUT.sleepers; for (let k = 0; k < n; k++) beds.push(h.id); });
-    const capacity = beds.length;
-    const order = S.villagers.slice().sort((a, b) => a.energy - b.energy);
+    // Ngủ: ai có chỗ trong lều / nhà dài thì hồi sức tốt, ai không có phải ngủ ngoài trời
+    if (S.villagers.some(v => v.bed === undefined)) assignBeds();
+    S.nightCouples = nightCouples();
     const E = CFG.ENERGY;
-    order.forEach((v, i) => {
-      const inHut = i < capacity;
+    S.villagers.forEach(v => {
+      const hut = v.bed ? WORLD.byId(v.bed) : null;
+      const inHut = !!hut;
       if (inHut) v.energy = clamp(v.energy + E.sleepHut, 0, 100);
       else if (S.weather === 'rain') { v.energy = clamp(v.energy + E.sleepRain, 0, 100); v.morale = clamp(v.morale + CFG.MORALE.rainNight, 0, 100); }
       else v.energy = clamp(v.energy + E.sleepOutside, 0, 100);
       if (v.fedToday) v.health = clamp(v.health + CFG.HEALTH.night, 0, 100);
-      v._hut = inHut ? beds[i] : null;
+      v._hut = hut ? hut.id : null;
+      delete v.bed; v.inside = 0;
       if (v.restKind !== 'sick') { v.resting = false; v.restKind = ''; v.restReason = ''; }
       v.task = null;
     });
@@ -812,11 +879,12 @@ const SIM = (() => {
     if (prev < CFG.EVENING && S.hour >= CFG.EVENING) onEvening();
     if (prev < CFG.MEAL && S.hour >= CFG.MEAL) onMeal();
     if (prev < CFG.CHAT && S.hour >= CFG.CHAT) onChat();
+    if (prev < CFG.BEDTIME && S.hour >= CFG.BEDTIME) onBedtime();
     computeGroups(dt);
     for (const v of S.villagers) updateVillager(v, dt);
     updateHunts(dt);
     if (window.EXP) EXP.tick(dt);
-    if (S.hour >= CFG.DAY_END) endDay();
+    if (S.hour >= CFG.DAY_END && (S.hour >= CFG.NIGHT_MAX || S.villagers.every(asleep))) endDay();
   }
 
   function step(hours) {
@@ -855,6 +923,11 @@ const SIM = (() => {
 
   // mô tả việc đang làm (cho giao diện)
   function jobText(v) {
+    const t0 = v.task;
+    if (t0 && t0.kind === 'sleep' && v.partner) { const m = vById(v.partner); if (m && m.inside === v.inside && WORLD.byId(v.inside)?.type === 'hut') return `Vợ chồng chung lều riêng với ${m.name}`; }
+    if (t0 && t0.kind === 'sleep') { const h = WORLD.byId(v.inside); return h && h.type === 'longhouse' ? 'Đang ngủ trong nhà dài' : 'Đang ngủ trong lều'; }
+    if (t0 && t0.kind === 'sleepout') return 'Ngủ ngoài trời bên lửa (thiếu chỗ ngủ)';
+    if (bedtime() && v.bed && !v.carry) return 'Đang về lều ngủ';
     if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';
     const t = v.task;
@@ -892,5 +965,6 @@ const SIM = (() => {
   return {
     newGame, tick, step, save, load, hasSave, clearSave, assign, check, huntEstimate, validHutSpot,
     evalGoals, foodDays, hutCount, jobText, taskProgress, coworkers, startNewDay, phase, cap, tileOf, vById, log, event, unstickAll, GKEY,
+    bedtime, assignBeds, doorTiles,
   };
 })();

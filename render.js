@@ -104,7 +104,7 @@ const RENDER = (() => {
     if (!t) return 'stand';
     if (t.kind === 'walk') return 'walk';
     if (t.kind === 'work' || t.kind === 'hunting') return 'work';
-    if (t.kind === 'sit' || t.kind === 'rest') return 'sit';
+    if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
   }
 
@@ -216,13 +216,14 @@ const RENDER = (() => {
       list.push([d.y, () => { shadow(lx, L(d.x), Tp(d.y), 5, 2); lx.drawImage(ART.SPR.deer[d.flip][d.wait > 0 ? 0 : f], L(d.x) - 7, Tp(d.y) - 11); }]);
     }
     for (const v of S.villagers) {
+      if (v.inside) continue; // đang ngủ trong lều: không nhìn thấy
       list.push([v.y, () => drawVillagerAt(v, false)]);
     }
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 
     // bóng mờ của dân được chọn (để thấy được khi khuất sau cây/lều)
-    for (const v of S.villagers) if (ui.selected.has(v.id)) drawVillagerAt(v, true);
+    for (const v of S.villagers) if (ui.selected.has(v.id) && !v.inside) drawVillagerAt(v, true);
 
     // bóng ma khi đặt lều
     if (ui.ghost) {
@@ -354,15 +355,46 @@ const RENDER = (() => {
     for (const o of S.objects) {
       if (o.type === 'site' && !done.has('work' + o.id)) { const [sx, sy] = W((o.x + 1) * T, o.y * T - 30); bar(sx, sy, bw, o.progress / o.need, '#c9a066'); }
     }
+    // lều có người đang ngủ: Zzz; vợ chồng ngủ riêng một lều: trái tim
+    const inHut = new Map();
+    for (const v of S.villagers) if (v.inside) { if (!inHut.has(v.inside)) inHut.set(v.inside, []); inHut.get(v.inside).push(v); }
+    for (const [hid, vs] of inHut) {
+      const h = WORLD.byId(hid); if (!h) continue;
+      const [sx, sy] = W((h.x + h.w / 2) * T, h.y * T - 14);
+      const b = Math.sin(time * 1.6 + hid) * 3 * dpr;
+      const adults = vs.filter(v => !v.child);
+      const couple = h.type === 'hut' && adults.length === 2 && adults[0].partner === adults[1].id;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      if (couple) {
+        const pulse = 1 + Math.sin(time * 4 + hid) * 0.12;
+        ctx.font = `bold ${Math.round(15 * dpr * pulse)}px system-ui`;
+        ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#4a0e1e'; ctx.strokeText('♥', sx, sy - 4 * dpr + b);
+        ctx.fillStyle = '#ff6b9a'; ctx.fillText('♥', sx, sy - 4 * dpr + b);
+      }
+      else { // ngủ nghỉ bình thường: Zzz
+        ctx.font = `bold ${Math.round(11 * dpr)}px system-ui`;
+        ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#1a2040'; ctx.fillStyle = '#e8f0ff';
+        const zs = [['z', 0, 0, 9], ['z', 5, -7, 11], ['Z', 11, -15, 13]];
+        for (const [ch, dx, dy, fs] of zs) {
+          ctx.font = `bold ${Math.round(fs * dpr)}px system-ui`;
+          ctx.strokeText(ch, sx + dx * dpr - 4 * dpr, sy + dy * dpr + b); ctx.fillText(ch, sx + dx * dpr - 4 * dpr, sy + dy * dpr + b);
+        }
+      }
+      if (ui.selected.size) {
+        const sel = vs.filter(v => ui.selected.has(v.id));
+        if (sel.length) label(sel.map(v => v.name).join(', ') + (couple ? ' · vợ chồng chung lều' : ' · đang ngủ'), sx, sy - 22 * dpr);
+      }
+    }
     // nhãn tên + biểu tượng việc cho người được chọn, Zzz cho người nghỉ
     for (const v of S.villagers) {
+      if (v.inside) continue;
       const [sx, sy] = W(v.x, v.y - 20);
       if (ui.selected.has(v.id)) {
         const w = label(v.name, sx, sy - 6 * dpr);
         const ic = jobIcon(v);
         if (ic && iconImgs[ic]) { const s = 16 * dpr; ctx.imageSmoothingEnabled = false; ctx.drawImage(iconImgs[ic], Math.round(sx + w / 2 + 2 * dpr), Math.round(sy - 6 * dpr - 15.5 * dpr), s, s); }
       }
-      if (v.resting && v.task && v.task.kind === 'rest') {
+      if ((v.resting && v.task && v.task.kind === 'rest') || (v.task && v.task.kind === 'sleepout')) {
         ctx.font = `bold ${Math.round(10 * dpr)}px system-ui`; ctx.fillStyle = '#e8f0ff'; ctx.textAlign = 'left';
         const b = Math.sin(time * 2 + v.id) * 3 * dpr;
         ctx.fillText('z', sx + 6 * dpr, sy + b); ctx.fillText('Z', sx + 10 * dpr, sy - 7 * dpr + b);
@@ -388,6 +420,7 @@ const RENDER = (() => {
   function pickVillager(wx, wy, tol) {
     let best = null;
     for (const v of S.villagers) {
+      if (v.inside) continue;
       if (Math.abs(wx - v.x) <= 6 + tol && wy >= v.y - 18 - tol && wy <= v.y + 3 + tol) {
         if (!best || Math.abs(wx - v.x) + Math.abs(wy - v.y + 8) < Math.abs(wx - best.x) + Math.abs(wy - best.y + 8)) best = v;
       }

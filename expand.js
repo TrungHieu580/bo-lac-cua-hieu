@@ -26,6 +26,7 @@ const EXP = (() => {
   // ---------------- TIỆN ÍCH ----------------
   const count = (t) => S.objects.filter(o => o.type === t).length;
   const adults = () => S.villagers.filter(v => !v.child);
+  function coupleCount() { return S.villagers.filter(v => !v.child && v.partner && v.sex === 'f' && SIM.vById(v.partner)).length; }
   function beds() { return count('hut') * CFG.HUT.sleepers + count('longhouse') * B.longhouse.beds; }
   function foodCapBonus() { return count('rack') * B.rack.foodCap + count('granary') * B.granary.foodCap; }
   function meatMult() { return 1 + Math.min(2, count('rack')) * B.rack.meatBonus; }
@@ -460,6 +461,7 @@ const EXP = (() => {
     else if (!site && !st.upgrading) {
       const shortBeds = Math.min(pop + 2, CFG.POP.max) - beds();
       if (shortBeds > 0) want = unlocked('longhouse') && count('longhouse') < Math.floor(pop / 8) ? 'longhouse' : 'hut';
+      else if (coupleCount() > count('hut')) { want = 'hut'; S.planNote = 'Vợ chồng cần lều riêng để ngủ chung'; }
       else if (st.level === 0 && pop >= 8) want = 'upgrade';
       else if (unlocked('rack') && count('rack') < (pop >= 14 ? 2 : 1)) want = 'rack';
       else if (unlocked('granary') && count('granary') < (pop >= 18 ? 2 : 1)) want = 'granary';
@@ -687,13 +689,14 @@ const EXP = (() => {
     if (!ok()) return;
     for (const f of adults()) {
       if (f.sex !== 'f' || !f.partner || f.pregnant > 0 || f.health < 60) continue;
+      if (!(S.nightCouples || []).some(c => c[1] === f.id)) continue; // phải cùng vào lều riêng đêm qua
       if (S.day - (f.lastBirth || -99) < F.birthGapDays) continue;
       const coming = S.villagers.filter(v => v.pregnant > 0).length;
       if (S.villagers.length + coming >= Math.min(P.max, beds())) break;
       if (rand() < F.pregnancyChance) {
         f.pregnant = F.pregnancyDays;
         const dad = SIM.vById(f.partner);
-        SIM.event(`${f.name}${dad ? ` và ${dad.name}` : ''} sắp có em bé (mang thai, còn ${F.pregnancyDays} ngày).`);
+        SIM.event(`Đêm qua ${f.name}${dad ? ` và ${dad.name}` : ''} ngủ chung lều — ${f.name} đã mang thai, còn ${F.pregnancyDays} ngày nữa em bé chào đời.`);
         EV.emit('toast', `${f.name} đang mang thai!`);
       }
     }
@@ -861,7 +864,8 @@ const EXP = (() => {
       ${row(free >= 1, `Còn chỗ ngủ trống: ${Math.max(0, free)} (cần ≥ 1)`)}
       ${row(fd >= P.minFoodDays, `Thức ăn đủ ${Math.floor(fd * 10) / 10} ngày (cần ≥ ${P.minFoodDays})`)}
       ${row(mo >= P.minMorale, `Tinh thần trung bình ${Math.round(mo)} (cần ≥ ${P.minMorale})`)}
-      ${row(couples.length > 0, `Vợ chồng: ${couples.length ? couples.join(', ') : `chưa có (nam và nữ gắn kết từ ${CFG.FAMILY.coupleBond} sẽ nên duyên)`}`)}`;
+      ${row(couples.length > 0, `Vợ chồng: ${couples.length ? couples.join(', ') : `chưa có (nam và nữ gắn kết từ ${CFG.FAMILY.coupleBond} sẽ nên duyên)`}`)}
+      ${row(!couples.length || count('hut') >= couples.length, `Lều riêng cho vợ chồng: ${count('hut')}/${couples.length} — vợ chồng phải cùng vào một lều riêng ban đêm mới có thể có con`)}`;
     if (popEl._last !== htmlPop) { popEl.innerHTML = htmlPop; popEl._last = htmlPop; }
     const un = p.querySelector('#ex-unlock');
     if (un) {

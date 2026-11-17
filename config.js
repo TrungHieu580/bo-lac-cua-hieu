@@ -14,7 +14,9 @@ window.CFG = {
   EVENING: 18,            // 18:00 mọi người về bên bếp lửa
   MEAL: 19,               // 19:00 ăn tối (mỗi người 1 khẩu phần)
   CHAT: 20,               // 20:00 chia sẻ chuyện trong ngày
-  DAY_END: 21,            // 21:00 đi ngủ → nhật ký cuối ngày
+  BEDTIME: 20.5,          // 20:30 mọi người rời bếp lửa, về lều của mình để ngủ
+  DAY_END: 21,            // từ 21:00, khi mọi người đã ngủ yên → nhật ký cuối ngày
+  NIGHT_MAX: 22.5,        // muộn nhất 22:30 thì kết thúc ngày dù còn người chưa vào lều
 
   GOAL: { day: 10, huts: 2, fields: 1, foodDays: 2, healthy: 4 },
 
@@ -85,7 +87,7 @@ window.CFG = {
   POP: { childDays: 4, newcomerChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 40 },
   REGROW: { saplingChance: 0.3, saplingDays: 3, boulderChance: 0.45, boulderMaxExtra: 4 },
   NEW_PLOT_RADIUS: 16,
-  FAMILY: { coupleBond: 60, pregnancyDays: 3, pregnancyChance: 0.4, birthGapDays: 4, pregnantWork: 0.7 },
+  FAMILY: { coupleBond: 60, pregnancyDays: 3, pregnancyChance: 0.4, birthGapDays: 4, pregnantWork: 0.7 }, // chỉ có thể mang thai khi vợ chồng ngủ chung một lều riêng
   FISH: { unlock: 8, spots: 5 },
   FESTIVAL: { unlock: 10, everyDays: 7, morale: 12, bond: 5 },
   HEALER: { heal: 12 },
