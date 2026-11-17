@@ -3,11 +3,12 @@
 // =====================================================================
 'use strict';
 const WORLD = (() => {
-  const W = CFG.MAP_W, H = CFG.MAP_H, T = CFG.TILE;
+  let W = CFG.MAP_W, H = CFG.MAP_H;
+  const T = CFG.TILE;
   const TER = ['grass', 'forest', 'dirt', 'sand', 'water', 'cliff', 'rock', 'meadow', 'farm'];
   const TI = {}; TER.forEach((n, i) => TI[n] = i);
   // Lều và lều đang dựng không chặn đường: dân làng đi xuyên qua được
-  const BLOCKING = { tree: 1, bush: 1, boulder: 1, fire: 1, storage: 1 };
+  const BLOCKING = { tree: 1, bush: 1, boulder: 1, fire: 1, storage: 1 }; // lều, nhà, giàn phơi, kho lương: đi xuyên qua được
 
   let block = new Uint8Array(W * H);
   let region = null;
@@ -21,6 +22,7 @@ const WORLD = (() => {
   function walkable(x, y) { return inb(x, y) && passTer(ter(x, y)) && !block[idx(x, y)]; }
 
   function rebuild() {
+    if (S.mapW && (S.mapW !== W || S.mapH !== H)) { W = S.mapW; H = S.mapH; }
     block = new Uint8Array(W * H);
     region = null;
     for (const o of S.objects) {
@@ -131,6 +133,8 @@ const WORLD = (() => {
 
   // ---------------- TẠO BẢN ĐỒ ----------------
   function generate() {
+    if (window.EXP) { S.mapW = W = CFG.MAP_W; S.mapH = H = CFG.MAP_H; return EXP.generate(); }
+    S.mapW = W = 36; S.mapH = H = 28;
     const r = ART.rng(20261117);
     const terrain = new Array(W * H).fill(TI.grass);
     S.terrain = terrain;
@@ -259,5 +263,5 @@ const WORLD = (() => {
     }
   }
 
-  return { W, H, T, TER, TI, ter, setTer, walkable, passTer, rebuild, objAt, byId, addObj, removeObj, fire, storage, ringTiles, insideTiles, findPath, nearestWalkable, mainRegion, inMain, nearestMain, generate, inb, idx, BLOCKING };
+  return { get W() { return W; }, get H() { return H; }, T, TER, TI, ter, setTer, walkable, passTer, rebuild, objAt, byId, addObj, removeObj, fire, storage, ringTiles, insideTiles, findPath, nearestWalkable, mainRegion, inMain, nearestMain, generate, inb, idx, BLOCKING };
 })();

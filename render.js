@@ -3,7 +3,8 @@
 // =====================================================================
 'use strict';
 const RENDER = (() => {
-  const T = CFG.TILE, MW = CFG.MAP_W, MH = CFG.MAP_H;
+  const T = CFG.TILE;
+  let MW = CFG.MAP_W, MH = CFG.MAP_H;
   let cv, ctx, lo, lx, dk, dkx, gc, gx;
   const cam = { x: 0, y: 0, zoom: 2 };
   let dpr = 1, time = 0;
@@ -63,6 +64,8 @@ const RENDER = (() => {
   // ---------------- NỀN ----------------
   function tileRng(tx, ty) { return ART.rng(tx * 7919 + ty * 104729 + 17); }
   function rebuildGround() {
+    MW = WORLD.W; MH = WORLD.H;
+    if (gc.width !== MW * T || gc.height !== MH * T) { gc.width = MW * T; gc.height = MH * T; gx.imageSmoothingEnabled = false; }
     gx.clearRect(0, 0, gc.width, gc.height);
     for (let ty = 0; ty < MH; ty++) for (let tx = 0; tx < MW; tx++) {
       const t = WORLD.ter(tx, ty);
@@ -167,7 +170,8 @@ const RENDER = (() => {
       const cx = (o.x + o.w / 2) * T - ox, cy = (o.y + o.h) * T - oy - 3;
       if (cx < -60 || cy < -60 || cx > vw + 60 || cy > vh + 80) continue;
       if (o.type === 'tree') shadow(lx, cx + 2, cy, 9, 3);
-      else if (o.type === 'hut' || o.type === 'site') shadow(lx, cx + 2, cy - 2, 23, 5);
+      else if (o.type === 'hut' || o.type === 'site' || o.type === 'rack' || o.type === 'granary') shadow(lx, cx + 2, cy - 2, o.w * 11 + 1, 5);
+      else if (o.type === 'longhouse') shadow(lx, cx + 2, cy - 2, 34, 5);
       else if (o.type === 'storage') shadow(lx, cx + 2, cy - 2, 22, 4);
       else if (o.type === 'bush' || o.type === 'boulder') shadow(lx, cx + 1, cy, 9, 3);
     }
@@ -187,10 +191,13 @@ const RENDER = (() => {
         case 'hut': list.push([foot, () => lx.drawImage(ART.SPR.hut, X, Y + 2 * T - 52)]); break;
         case 'site': list.push([foot, () => {
           const p = Math.min(1, o.progress / o.need);
-          lx.drawImage(ART.SPR.site, X, Y + 2 * T - 52);
-          const h = Math.round(46 * p);
-          if (h > 0) lx.drawImage(ART.SPR.hut, 0, 50 - h, 48, h, X, Y + 2 * T - 52 + 50 - h, 48, h);
-          lx.drawImage(ART.SPR.logs, X - 6, Y + 2 * T - 10);
+          const spr = EXP.spriteFor(o.kind || 'hut');
+          const sy0 = Y + o.h * T - spr.height + 2;
+          if (spr === ART.SPR.hut) lx.drawImage(ART.SPR.site, X, sy0);
+          else { lx.globalAlpha = 0.3; lx.drawImage(spr, X, sy0); lx.globalAlpha = 1; }
+          const h = Math.round(spr.height * p);
+          if (h > 0) lx.drawImage(spr, 0, spr.height - h, spr.width, h, X, sy0 + spr.height - h, spr.width, h);
+          lx.drawImage(ART.SPR.logs, X - 6, Y + o.h * T - 10);
         }]); break;
         case 'storage': list.push([foot, () => {
           lx.drawImage(ART.SPR.storage, X, Y + 2 * T - 48);
@@ -200,7 +207,8 @@ const RENDER = (() => {
           if (S.res.food > 0) lx.drawImage(ART.SPR.foodpile, X + 18, Y + 2 * T - 22);
           if (o.upgrading) { lx.fillStyle = '#6b4224'; lx.fillRect(X + 1, Y + 2 * T - 54, 1, 30); lx.fillRect(X + 46, Y + 2 * T - 54, 1, 30); lx.fillRect(X + 1, Y + 2 * T - 54, 46, 1); }
         }]); break;
-        case 'huntzone': list.push([(o.y + 2) * T, () => lx.drawImage(ART.SPR.totem, (o.x + 8) * T - ox + 4, (o.y + 1) * T - oy - 2)]); break;
+        case 'huntzone': list.push([(o.y + 2) * T, () => lx.drawImage(ART.SPR.totem, (o.x + o.w - 1) * T - ox + 4, (o.y + 1) * T - oy - 2)]); break;
+        default: { const d = EXP.drawObj(o, X, Y, lx); if (d) list.push([foot, d]); }
       }
     }
     for (const d of deer) {
@@ -219,9 +227,11 @@ const RENDER = (() => {
     // bóng ma khi đặt lều
     if (ui.ghost) {
       const { x, y, ok } = ui.ghost;
-      lx.globalAlpha = 0.55; lx.drawImage(ART.SPR.hut, x * T - ox, y * T + 2 * T - 52 - oy); lx.globalAlpha = 1;
+      const gw = ui.ghost.w || 2, gh = ui.ghost.h || 2;
+      const spr = EXP.spriteFor(ui.ghost.kind || 'hut');
+      lx.globalAlpha = 0.55; lx.drawImage(spr, x * T - ox, y * T + gh * T - spr.height + 2 - oy); lx.globalAlpha = 1;
       lx.fillStyle = ok ? 'rgba(80,220,80,0.35)' : 'rgba(230,50,50,0.4)';
-      lx.fillRect(x * T - ox, y * T - oy, 2 * T, 2 * T);
+      lx.fillRect(x * T - ox, y * T - oy, gw * T, gh * T);
     }
 
     lighting(vw, vh, ox, oy);
@@ -240,7 +250,7 @@ const RENDER = (() => {
         shadow(lx, X, Y, 5, 2);
         if (ui.selected.has(v.id)) { ring(lx, X, Y, 7, 3, '#ffe14a'); ring(lx, X, Y + 1, 7, 3, '#b8860b'); }
       }
-      ART.drawVillager(lx, X, Y, v, time + v.id * 0.37, pose, pose === 'sit' ? 0 : v.facing, ghost ? 0.4 : undefined);
+      (v.child ? EXP.drawChild : ART.drawVillager)(lx, X, Y, v, time + v.id * 0.37, pose, pose === 'sit' ? 0 : v.facing, ghost ? 0.4 : undefined);
       if (v.carry && !ghost) {
         const vis = v.carry.vis === 'meat' ? { meat: 1 } : v.carry.vis === 'wood' ? { wood: 1 } : v.carry.vis === 'stone' ? { stone: 1 } : { food: 1 };
         ART.drawCarry(lx, X, Y, vis);
@@ -268,8 +278,8 @@ const RENDER = (() => {
     let g = dkx.createRadialGradient(fx, fy, 4, fx, fy, 86 * flick);
     g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.55, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
     dkx.fillStyle = g; dkx.fillRect(0, 0, vw, vh);
-    for (const o of S.objects) if (o.type === 'hut') {
-      const hx = (o.x + 1) * T - ox, hy = (o.y + 1.8) * T - oy;
+    for (const o of S.objects) if (o.type === 'hut' || o.type === 'longhouse') {
+      const hx = (o.x + o.w / 2) * T - ox, hy = (o.y + 1.8) * T - oy;
       g = dkx.createRadialGradient(hx, hy, 2, hx, hy, 22);
       g.addColorStop(0, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
       dkx.fillStyle = g; dkx.fillRect(hx - 24, hy - 24, 48, 48);
@@ -333,7 +343,7 @@ const RENDER = (() => {
         const key = t.kind + t.target;
         if (done.has(key)) continue; done.add(key);
         const o = WORLD.byId(t.target); if (!o) continue;
-        const [sx, sy] = o.type === 'huntzone' ? W((o.x + 8.5) * T, (o.y + 0.2) * T) : W((o.x + o.w / 2) * T, o.y * T - (o.type === 'site' || o.type === 'storage' ? 30 : 4));
+        const [sx, sy] = o.type === 'huntzone' ? W((o.x + o.w - 0.5) * T, (o.y + 0.2) * T) : W((o.x + o.w / 2) * T, o.y * T - (o.type === 'site' || o.type === 'storage' ? 30 : 4));
         bar(sx, sy, bw, p, t.kind === 'hunting' ? '#e05a3a' : '#8fd14f');
       }
     }
@@ -383,12 +393,12 @@ const RENDER = (() => {
   }
   function pickObject(wx, wy) {
     const tx = Math.floor(wx / T), ty = Math.floor(wy / T);
-    const cands = S.objects.filter(o => o.type !== 'huntzone' && o.type !== 'stump').sort((a, b) => (b.y + b.h) - (a.y + a.h));
+    const cands = S.objects.filter(o => o.type !== 'huntzone' && o.type !== 'stump' && o.type !== 'sapling').sort((a, b) => (b.y + b.h) - (a.y + a.h));
     for (const o of cands) {
       const x0 = o.x * T, x1 = (o.x + o.w) * T, y1 = (o.y + o.h) * T;
       let y0 = o.y * T;
       if (o.type === 'tree') { if (wx >= x0 + 3 && wx <= x1 - 3 && wy >= y0 - 16 && wy <= y1) return o; continue; }
-      if (o.type === 'hut' || o.type === 'site' || o.type === 'storage') y0 -= 8;
+      if (o.type === 'hut' || o.type === 'site' || o.type === 'storage' || o.type === 'longhouse' || o.type === 'granary' || o.type === 'rack') y0 -= 8;
       if (wx >= x0 && wx < x1 && wy >= y0 && wy < y1) return o;
     }
     const z = S.objects.find(o => o.type === 'huntzone' && tx >= o.x && ty >= o.y && tx < o.x + o.w && ty < o.y + o.h);

@@ -41,7 +41,8 @@ const UI = (() => {
     $('#t-clock').textContent = fmtH(S.hour);
     $('#t-weather').innerHTML = ic(S.weather === 'rain' ? 'rain' : 'sun') + `<span class="wl">${S.weather === 'rain' ? 'Mưa' : 'Nắng'}</span>`;
     $('#t-fc').innerHTML = ic(S.forecast === 'rain' ? 'rain' : 'sun');
-    $('#r-pop').textContent = S.villagers.length;
+    $('#r-pop').textContent = EXP.popText();
+    $('#r-pop').parentNode.title = 'Dân số / chỗ ngủ';
     $('#r-food').textContent = S.res.food;
     const d = SIM.foodDays();
     const de = $('#r-days');
@@ -121,9 +122,12 @@ const UI = (() => {
       if (full || !p.querySelector('.vlist')) p.innerHTML = villagerPanelHTML();
       updateVillagerPanel();
     } else if (state.sheet === 'build') {
-      p.innerHTML = buildPanelHTML();
+      p.innerHTML = EXP.buildPanelHTML();
     } else if (state.sheet === 'journal') {
       if (full) p.innerHTML = journalHTML();
+    } else if (state.sheet === 'auto') {
+      if (full || !p.querySelector('#ex-plan')) p.innerHTML = EXP.autoPanelHTML();
+      EXP.updateAutoPanel(p);
     }
   }
 
@@ -152,6 +156,7 @@ const UI = (() => {
   }
   function updateVillagerPanel() {
     const p = $('#panel');
+    if (p.querySelectorAll('.vrow').length !== S.villagers.length) p.innerHTML = villagerPanelHTML();
     for (const v of S.villagers) {
       const row = p.querySelector(`.vrow[data-id="${v.id}"]`);
       if (!row) continue;
@@ -216,6 +221,7 @@ const UI = (() => {
   function actionsFor(p) {
     const out = { title: '', desc: '', actions: [] };
     const n = Math.max(1, state.selected.size);
+    if (p.kind === 'place') return EXP.placeActions(p, n);
     if (p.kind === 'hut') {
       out.title = 'Dựng lều tại đây';
       out.desc = `Chi phí: ${CFG.HUT.wood} gỗ, ${CFG.HUT.stone} đá (trừ ngay khi xác nhận) · ${CFG.HUT.hours} giờ công.`;
@@ -228,6 +234,7 @@ const UI = (() => {
       out.title = tn;
       out.desc = `Ô (${p.tx}, ${p.ty})`;
       if (p.hut && SIM.validHutSpot(p.hut[0], p.hut[1]).ok) out.actions.push({ spec: { type: 'buildHut', x: p.hut[0], y: p.hut[1] }, label: 'Xây lều', detail: `Chi phí ${CFG.HUT.wood} gỗ, ${CFG.HUT.stone} đá · ${CFG.HUT.hours} giờ công (≈ ${hrs(CFG.HUT.hours / n)} với ${n} người)` });
+      EXP.tileActions(p, out, n);
       out.actions.push({ spec: { type: 'move', x: p.tx, y: p.ty }, label: 'Đi tới đây', detail: 'Di chuyển tới ô này rồi chờ lệnh.' });
       return out;
     }
@@ -271,6 +278,10 @@ const UI = (() => {
         out.actions.push({ spec: { type: 'build', target: o.id }, label: 'Tiếp tục dựng', detail: `≈ ${hrs((o.need - o.progress) / n)} với ${n} người` });
         break;
       }
+      case 'rack': case 'granary': case 'longhouse': {
+        out.title = EXP.bname(o.type); out.desc = EXP.bdesc(o.type);
+        break;
+      }
       case 'hut': {
         out.title = 'Lều cỏ'; out.desc = `Chỗ ngủ cho ${CFG.HUT.sleepers} người. Ngủ trong lều hồi ${CFG.ENERGY.sleepHut} năng lượng (ngoài trời ${CFG.ENERGY.sleepOutside}).`;
         break;
@@ -302,7 +313,7 @@ const UI = (() => {
     closeSheet();
     state.popup = p;
     state.target = p.kind === 'obj' ? p.id : null;
-    state.ghost = p.kind === 'hut' ? { x: p.x, y: p.y, ok: true } : (p.kind === 'tile' && p.hut && SIM.validHutSpot(p.hut[0], p.hut[1]).ok ? null : null);
+    state.ghost = EXP.ghostFor(p);
     state.moveTile = p.kind === 'tile' ? [p.tx, p.ty] : null;
     renderPopup();
     $('#popup').classList.remove('hidden');
@@ -341,10 +352,10 @@ const UI = (() => {
     const vs = selectedVs();
     const r = SIM.assign(a.spec, vs);
     if (!r.ok) { toast(r.msg, 'err'); renderPopup(); return; }
-    let msg = `Đã giao "${a.label}" cho ${vs.map(v => v.name).join(', ')}`;
+    let msg = vs.length ? `Đã giao "${a.label}" cho ${vs.map(v => v.name).join(', ')}` : `Đã thực hiện: ${a.label}`;
     if (r.later) msg += ' — sẽ bắt đầu từ sáng mai';
     toast(msg, 'ok');
-    if (a.spec.type === 'buildHut') { state.buildMode = false; $('#buildhint').classList.add('hidden'); }
+    if (a.spec.type === 'buildHut' || a.spec.type === 'buildAt') { state.buildMode = false; $('#buildhint').classList.add('hidden'); }
     state.ghost = null;
     closePopup();
     GAME.save();
@@ -356,10 +367,11 @@ const UI = (() => {
   function tapMap(cssX, cssY, additive) {
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
     if (state.buildMode) {
-      const [x, y] = hutSpotAt(wx, wy);
-      const v = SIM.validHutSpot(x, y);
-      if (!v.ok) { state.ghost = { x, y, ok: false }; toast(v.msg, 'err'); return; }
-      openPopup({ kind: 'hut', x, y });
+      const b = CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
+      const x = Math.round(wx / T - b.w / 2), y = Math.round(wy / T - b.h / 2);
+      const v = SIM.validHutSpot(x, y, b.w, b.h);
+      if (!v.ok) { state.ghost = { x, y, ok: false, kind: state.buildKind, w: b.w, h: b.h }; toast(v.msg, 'err'); return; }
+      openPopup({ kind: 'place', b: state.buildKind || 'hut', x, y });
       return;
     }
     const tol = Math.max(2, 8 * RENDER.dpr / RENDER.cam.zoom);
@@ -378,7 +390,7 @@ const UI = (() => {
     if (!WORLD.inb(tx, ty)) return;
     const hut = hutSpotAt(wx, wy);
     const hutOk = SIM.validHutSpot(hut[0], hut[1]).ok;
-    if (state.selected.size || hutOk) {
+    if (state.selected.size || hutOk || EXP.plotSpotAt(wx, wy)) {
       if (!WORLD.walkable(tx, ty) && !hutOk) { toast('Không thể đi tới đây', 'err'); return; }
       openPopup({ kind: 'tile', tx, ty, hut: hutOk ? hut : null });
     }
@@ -386,15 +398,18 @@ const UI = (() => {
   function hoverMap(cssX, cssY) {
     if (!state.buildMode || state.popup) return;
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
-    const [x, y] = hutSpotAt(wx, wy);
-    state.ghost = { x, y, ok: SIM.validHutSpot(x, y).ok };
+    const b = CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
+    const x = Math.round(wx / T - b.w / 2), y = Math.round(wy / T - b.h / 2);
+    state.ghost = { x, y, ok: SIM.validHutSpot(x, y, b.w, b.h).ok, kind: state.buildKind, w: b.w, h: b.h };
   }
 
-  function startBuildMode() {
+  function startBuildMode(kind) {
+    kind = typeof kind === 'string' && CFG.BUILDINGS[kind] ? kind : 'hut';
     closeSheet(); closePopup();
-    const h = CFG.HUT;
-    if (S.res.wood < h.wood) { toast(`Cần thêm ${h.wood - S.res.wood} gỗ để dựng lều`, 'err'); return; }
-    if (S.res.stone < h.stone) { toast(`Cần thêm ${h.stone - S.res.stone} đá để dựng lều`, 'err'); return; }
+    const h = CFG.BUILDINGS[kind];
+    if (S.res.wood < h.wood) { toast(`Cần thêm ${h.wood - S.res.wood} gỗ để xây ${h.name}`, 'err'); return; }
+    if (S.res.stone < h.stone) { toast(`Cần thêm ${h.stone - S.res.stone} đá để xây ${h.name}`, 'err'); return; }
+    state.buildKind = kind;
     state.buildMode = true;
     $('#buildhint').classList.remove('hidden');
     const f = WORLD.fire();
@@ -484,7 +499,7 @@ const UI = (() => {
       <ul class="jlist">
         ${S.villagers.map(v => `<li><img class="pt sm" src="${pv(v)}"> <b>${v.name}</b> — giỏi ${CFG.SKILL_NAMES[v.main]}</li>`).join('')}
       </ul>
-      <p><b>Gợi ý ngày đầu:</b> Mây và Nụ hái quả (có thêm hạt giống), Sương và Hiếu dọn một ruộng, Đá và Gió đi săn hoặc đốn gỗ, nhặt đá để dựng lều.</p>
+      <p><b>Làng tự vận hành:</b> mỗi người tự chọn việc hợp nghề, tự dựng lều, mở ruộng. Khi đủ chỗ ngủ, thức ăn và tinh thần, sẽ có người mới tới và em bé chào đời. Bạn vẫn có thể giao việc tay, đổi ưu tiên hoặc tắt trong nút <b>Tự động</b>.</p>
       <div class="mbtns"><button class="btn big" id="m-h">Hướng dẫn</button><button class="btn big go" id="m-go">Vào trại</button></div>`, (m) => {
       m.querySelector('#m-go').onclick = () => { closeModal(); state.paused = false; toast('Chạm vào một dân làng để chọn, rồi chạm vào mục tiêu để giao việc.'); };
       m.querySelector('#m-h').onclick = () => modal(helpHTML() + `<div class="mbtns"><button class="btn big go" id="m-back">Vào trại</button></div>`, (m2) => { m2.querySelector('#m-back').onclick = () => { closeModal(); state.paused = false; }; });
@@ -499,6 +514,7 @@ const UI = (() => {
       <button class="nb" data-k="villagers">${ic('people', 'bi')}<span>Dân làng</span></button>
       <button class="nb" data-k="build">${ic('hut', 'bi')}<span>Xây dựng</span></button>
       <button class="nb" data-k="journal"><span class="bi">📜</span><span>Nhật ký</span></button>
+      <button class="nb" data-k="auto"><span class="bi">⚙</span><span>Tự động</span></button>
       <button class="nb" id="b-pause"></button>
       <button class="nb" id="b-speed"></button>
       <button class="nb" id="b-menu"><span class="bi">☰</span><span>Menu</span></button>`;
@@ -527,6 +543,8 @@ const UI = (() => {
           toast(r.ok ? (a === 'rest' ? 'Đã cho nghỉ ngơi' : 'Đã hủy việc') : r.msg, r.ok ? 'ok' : 'err');
         }
         else if (a === 'place') startBuildMode();
+        else if (a.startsWith('place-')) startBuildMode(a.slice(6));
+        else if (a.startsWith('ex-')) { EXP.onPanelAct(a); renderSheet(true); return; }
         else if (a === 'upgrade') { const st = WORLD.storage(); RENDER.centerOn((st.x + 1) * T, (st.y + 1) * T); openPopup({ kind: 'obj', id: st.id }); }
         if (state.sheet === 'villagers') updateVillagerPanel();
         return;
@@ -548,7 +566,7 @@ const UI = (() => {
     });
     $('#bh-cancel').addEventListener('click', cancelBuildMode);
     EV.on('toast', (m) => toast(m));
-    EV.on('dayEnd', (j) => { setTimeout(() => showDayEnd(j), 50); });
+    EV.on('dayEnd', (j) => { if (EXP.autoSkip(j)) return; setTimeout(() => showDayEnd(j), 50); });
     EV.on('plot', () => { if (state.popup) renderPopup(); });
   }
 
@@ -556,7 +574,7 @@ const UI = (() => {
   function cycleSpeed() { const sp = CFG.SPEEDS; S.speed = sp[(sp.indexOf(S.speed) + 1) % sp.length]; state.paused = false; updateTop(); }
   function setSpeed(i) { S.speed = CFG.SPEEDS[i] || 1; state.paused = false; updateTop(); }
 
-  function refresh() { updateTop(); updateGoals(); updateSelbar(); if (state.sheet === 'villagers') updateVillagerPanel(); }
+  function refresh() { updateTop(); updateGoals(); updateSelbar(); if (state.sheet === 'villagers') updateVillagerPanel(); if (state.sheet === 'auto') EXP.updateAutoPanel($('#panel')); }
   let acc = 0, accJ = 0;
   function update(dt) {
     acc += dt; accJ += dt;

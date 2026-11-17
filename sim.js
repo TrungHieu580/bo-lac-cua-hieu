@@ -51,6 +51,7 @@ const SIM = (() => {
       const a = S.villagers.find(v => v.name === n1), b = S.villagers.find(v => v.name === n2);
       if (a && b) { a.bonds[b.id] = val; b.bonds[a.id] = val; }
     }
+    if (window.EXP) EXP.migrate(S);
     log('Bộ lạc của Hiếu dựng trại bên sông. Ngày 1 bắt đầu.');
   }
 
@@ -67,7 +68,7 @@ const SIM = (() => {
   const tileCenter = (tx, ty) => [tx * T + T / 2, ty * T + T * 0.75];
   const isAt = (v, tiles) => { const [tx, ty] = tileOf(v); return tiles.some(([x, y]) => x === tx && y === ty); };
   const phase = () => (S.hour >= CFG.EVENING ? 'evening' : 'day');
-  const cap = (res) => res === 'seeds' ? CFG.SEED_CAP : CFG.STORAGE_CAP[WORLD.storage().level];
+  const cap = (res) => res === 'seeds' ? CFG.SEED_CAP : CFG.STORAGE_CAP[WORLD.storage().level] + (res === 'food' && window.EXP ? EXP.foodCapBonus() : 0);
   const pop = () => S.villagers.length;
   function foodDays() { return pop() ? S.res.food / pop() : 0; }
 
@@ -147,6 +148,8 @@ const SIM = (() => {
   // Kiểm tra trước khi giao — trả về {ok, msg, info}
   function check(spec, vs) {
     vs = vs || [];
+    if (!['rest', 'cancel'].includes(spec.type) && vs.some(v => v.child)) return { ok: false, msg: 'Trẻ con chưa thể làm việc' };
+    if (window.EXP && EXP.handles(spec.type)) return EXP.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
     const needPeople = (n) => vs.length < n ? (n - vs.length === 1 ? `Cần thêm một thành viên` : `Cần thêm ${n - vs.length} thành viên`) : null;
@@ -217,6 +220,7 @@ const SIM = (() => {
   function assign(spec, vs) {
     const c = check(spec, vs);
     if (!c.ok) return c;
+    if (window.EXP && EXP.handles(spec.type)) return EXP.assign(spec, vs, c);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
       c.later = true;
@@ -275,15 +279,16 @@ const SIM = (() => {
     return c;
   }
 
-  function validHutSpot(x, y) {
+  function validHutSpot(x, y, w, h) {
+    w = w || 2; h = h || 2;
     const f = WORLD.fire();
-    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const tx = x + i, ty = y + j, t = WORLD.ter(tx, ty);
       if (t === null) return { ok: false, msg: 'Ngoài bản đồ' };
       if (!['grass', 'forest', 'dirt', 'rock'].includes(t)) return { ok: false, msg: 'Không thể dựng lều trên địa hình này' };
       if (WORLD.objAt(tx, ty)) return { ok: false, msg: 'Ô này đã có vật cản' };
     }
-    if (Math.hypot(x + 1 - (f.x + 0.5), y + 1 - (f.y + 0.5)) > CFG.BUILD_RADIUS) return { ok: false, msg: 'Lều phải dựng gần bếp lửa' };
+    if (Math.hypot(x + w / 2 - (f.x + 0.5), y + h / 2 - (f.y + 0.5)) > (window.EXP ? EXP.buildRadius() : CFG.BUILD_RADIUS)) return { ok: false, msg: 'Công trình phải ở gần bếp lửa' };
     return { ok: true };
   }
 
@@ -333,7 +338,7 @@ const SIM = (() => {
     const success = rand() < chance;
     const close = hasClosePair(vs);
     if (success) {
-      const meat = est.min + Math.floor(rand() * (est.max - est.min + 1));
+      const meat = Math.round((est.min + Math.floor(rand() * (est.max - est.min + 1))) * (window.EXP ? EXP.meatMult() : 1));
       zone.animals = Math.max(0, zone.animals - 1);
       let left = meat;
       vs.forEach((v, i) => {
@@ -444,6 +449,7 @@ const SIM = (() => {
   }
 
   function plan(v) {
+    if (v.child && phase() !== 'evening') { if (v.carry) return goDeposit(v); return idle(v); }
     if (phase() === 'evening') {
       if (v.carry) return goDeposit(v);
       return goFire(v, 'sit');
@@ -574,13 +580,15 @@ const SIM = (() => {
       EV.emit('plot', o); EV.emit('toast', 'Thu hoạch xong ruộng!');
     } else if (mode === 'build') {
       WORLD.removeObj(o);
-      const hut = WORLD.addObj({ type: 'hut', x: o.x, y: o.y, w: 2, h: 2 });
+      const kind = o.kind || 'hut';
+      const name = window.EXP ? EXP.bname(kind) : 'Lều';
+      WORLD.addObj({ type: kind, x: o.x, y: o.y, w: o.w, h: o.h });
       WORLD.rebuild();
-      S.stats.hutsBuilt++;
+      if (kind === 'hut') S.stats.hutsBuilt++;
       S.villagers.forEach(v => v.morale = clamp(v.morale + CFG.MORALE.built, 0, 100));
-      S.today.built.push('Lều');
-      event('Một chiếc lều mới đã dựng xong! Thành viên ngủ trong lều sẽ hồi phục tốt hơn.');
-      EV.emit('toast', 'Lều mới đã hoàn thành!');
+      S.today.built.push(name);
+      event(kind === 'hut' ? 'Một chiếc lều mới đã dựng xong! Thành viên ngủ trong lều sẽ hồi phục tốt hơn.' : `${name} đã xây xong!`);
+      EV.emit('toast', `${name} đã hoàn thành!`);
       unstickAll();
     } else if (mode === 'upgrade') {
       o.level++; o.upgrading = null;
@@ -637,7 +645,7 @@ const SIM = (() => {
       S.today[res + 'In'] += add;
       if (add > 0) EV.emit('float', { x: (st.x + 1) * T, y: st.y * T - offset, text: `+${add}`, icon: res });
       offset += 9;
-      if (add < amt) EV.emit('toast', `Kho đầy — mất ${amt - add} ${RES_NAME[res]}. Hãy nâng cấp kho.`);
+      if (add < amt && (deposit._d !== S.day || S.hour - deposit._h > 3)) { deposit._d = S.day; deposit._h = S.hour; EV.emit('toast', `Kho đầy — mất ${amt - add} ${RES_NAME[res]}. Hãy nâng cấp kho hoặc xây kho lương.`); }
     }
   }
 
@@ -745,8 +753,10 @@ const SIM = (() => {
     if (!S.dayEndPending) return;
     S.dayEndPending = false;
     // Ngủ: lều chứa CFG.HUT.sleepers người mỗi lều, ưu tiên người mệt nhất
-    const huts = S.objects.filter(o => o.type === 'hut');
-    const capacity = huts.length * CFG.HUT.sleepers;
+    const huts = S.objects.filter(o => o.type === 'hut' || o.type === 'longhouse');
+    const beds = [];
+    huts.forEach(h => { const n = h.type === 'longhouse' ? CFG.BUILDINGS.longhouse.beds : CFG.HUT.sleepers; for (let k = 0; k < n; k++) beds.push(h.id); });
+    const capacity = beds.length;
     const order = S.villagers.slice().sort((a, b) => a.energy - b.energy);
     const E = CFG.ENERGY;
     order.forEach((v, i) => {
@@ -755,7 +765,7 @@ const SIM = (() => {
       else if (S.weather === 'rain') { v.energy = clamp(v.energy + E.sleepRain, 0, 100); v.morale = clamp(v.morale + CFG.MORALE.rainNight, 0, 100); }
       else v.energy = clamp(v.energy + E.sleepOutside, 0, 100);
       if (v.fedToday) v.health = clamp(v.health + CFG.HEALTH.night, 0, 100);
-      v._hut = inHut ? huts[Math.floor(i / CFG.HUT.sleepers)].id : null;
+      v._hut = inHut ? beds[i] : null;
       if (v.restKind !== 'sick') { v.resting = false; v.restKind = ''; v.restReason = ''; }
       v.task = null;
     });
@@ -786,6 +796,7 @@ const SIM = (() => {
       if (tile) [v.x, v.y] = tileCenter(tile[0], tile[1]);
       delete v._hut;
     }
+    if (window.EXP) EXP.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
     EV.emit('newDay');
@@ -801,6 +812,7 @@ const SIM = (() => {
     computeGroups(dt);
     for (const v of S.villagers) updateVillager(v, dt);
     updateHunts(dt);
+    if (window.EXP) EXP.tick(dt);
     if (S.hour >= CFG.DAY_END) endDay();
   }
 
@@ -829,6 +841,7 @@ const SIM = (() => {
       const d = JSON.parse(raw);
       if (!d || d.version !== 1 || !Array.isArray(d.objects)) return false;
       window.S = d;
+      if (window.EXP) EXP.migrate(S);
       S.villagers.forEach(v => { v.task = null; });
       WORLD.rebuild();
       unstickAll();
@@ -839,6 +852,7 @@ const SIM = (() => {
 
   // mô tả việc đang làm (cho giao diện)
   function jobText(v) {
+    if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';
     const t = v.task;
     if (phase() === 'evening') return t && t.kind === 'sit' ? 'Quây quần bên lửa' : v.carry ? 'Mang đồ về kho' : 'Về bên bếp lửa';
@@ -847,12 +861,12 @@ const SIM = (() => {
     const where = o ? ({ tree: 'cây', bush: 'bụi quả', boulder: 'tảng đá', plot: 'ruộng', site: 'lều', storage: 'kho', huntzone: 'đồng cỏ' }[o.type] || '') : '';
     let s = {
       gather: o ? G[GKEY[o.type]]?.label || 'Thu gom' : 'Thu gom', clear: 'Dọn đất', sow: 'Gieo hạt', harvest: 'Thu hoạch',
-      build: 'Dựng lều', upgrade: 'Nâng cấp kho', hunt: 'Đi săn', move: 'Di chuyển',
+      build: 'Xây dựng', upgrade: 'Nâng cấp kho', hunt: 'Đi săn', move: 'Di chuyển',
     }[v.job.type] || v.job.type;
     if (v.carry) s += ' · đang mang đồ về';
     else if (t && t.kind === 'walk') s += ' · đang đi';
     else if (t && t.kind === 'huntwait') s += ' · chờ đồng đội';
-    return s + (where && v.job.type !== 'build' ? ` (${where})` : '');
+    return s + (where && v.job.type !== 'build' ? ` (${where})` : '') + (v.job.auto || !S.auto ? '' : ' · giao tay');
   }
 
   function taskProgress(v) {
@@ -874,6 +888,6 @@ const SIM = (() => {
 
   return {
     newGame, tick, step, save, load, hasSave, clearSave, assign, check, huntEstimate, validHutSpot,
-    evalGoals, foodDays, hutCount, jobText, taskProgress, coworkers, startNewDay, phase, cap, tileOf, vById, log, GKEY,
+    evalGoals, foodDays, hutCount, jobText, taskProgress, coworkers, startNewDay, phase, cap, tileOf, vById, log, event, unstickAll, GKEY,
   };
 })();

@@ -5,8 +5,8 @@
 // =====================================================================
 window.CFG = {
   TILE: 24,               // kích thước ô (px) — phóng theo bội số nguyên
-  MAP_W: 36,
-  MAP_H: 28,
+  MAP_W: 48,
+  MAP_H: 36,
   SECONDS_PER_HOUR: 7.5,  // 1 giờ game = 7.5 giây thật ở tốc độ x1 (~2 phút / ngày)
   SPEEDS: [1, 2, 4],
 
@@ -19,7 +19,7 @@ window.CFG = {
   GOAL: { day: 10, huts: 2, fields: 1, foodDays: 2, healthy: 4 },
 
   WALK_TILES_PER_HOUR: 22,
-  BUILD_RADIUS: 10,       // lều phải nằm trong bán kính này quanh bếp lửa (ô)
+  BUILD_RADIUS: 12,       // công trình phải nằm trong bán kính này quanh bếp lửa (ô), tăng dần theo dân số
 
   START: { food: 12, wood: 5, stone: 0, seeds: 0 },
   STORAGE_CAP: [40, 100], // sức chứa mỗi loại theo cấp kho
@@ -77,6 +77,20 @@ window.CFG = {
     { name: 'Sương', main: 'farm',   skills: { hunt: 1, gather: 3, build: 2, farm: 5 }, hair: '#e8e0d0', tunic: '#5f6e3a', band: '#f0f0f0', skin: '#dcaa7c' },
   ],
   START_BONDS: [ ['Đá', 'Gió', 62], ['Mây', 'Nụ', 55], ['Hiếu', 'Sương', 50] ], // các cặp khác: 25–45
+
+  // ---- Tự động & phát triển ----
+  AUTO: { interval: 0.25, defaultOn: true },     // bộ lập kế hoạch chạy mỗi 0.25 giờ game
+  POP: { childDays: 4, newcomerChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 30 },
+  REGROW: { saplingChance: 0.3, saplingDays: 3, boulderChance: 0.45, boulderMaxExtra: 4 },
+  NEW_PLOT_RADIUS: 16,
+  BUILDINGS: {
+    hut:       { name: 'Lều cỏ',         w: 2, h: 2, wood: 10, stone: 5,  hours: 12, unlock: 0 },
+    rack:      { name: 'Giàn phơi thịt', w: 2, h: 2, wood: 6,  stone: 2,  hours: 6,  unlock: 7,  max: 2, foodCap: 30, meatBonus: 0.25 },
+    granary:   { name: 'Kho lương',      w: 2, h: 2, wood: 12, stone: 6,  hours: 10, unlock: 9,  max: 2, foodCap: 60 },
+    longhouse: { name: 'Nhà dài',        w: 3, h: 2, wood: 18, stone: 10, hours: 16, unlock: 10, beds: 6 },
+  },
+  NAMES: ['Sông', 'Núi', 'Lá', 'Hoa', 'Trăng', 'Sao', 'Cỏ', 'Suối', 'Rêu', 'Mưa', 'Bão', 'Lửa', 'Ong', 'Sóc', 'Cò', 'Én', 'Tre', 'Mận',
+    'Đào', 'Lúa', 'Mầm', 'Khói', 'Thác', 'Hạt', 'Gấu', 'Nai', 'Bông', 'Cát', 'Rừng', 'Đồi', 'Nắng', 'Hồ', 'Sen', 'Cúc', 'Vàng', 'Mai'],
 
   SKILL_NAMES: { hunt: 'Săn bắt', gather: 'Hái lượm', build: 'Xây dựng', farm: 'Canh tác' },
 };

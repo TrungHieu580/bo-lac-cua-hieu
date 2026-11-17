@@ -64,6 +64,14 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - Tải lại giữa lúc xây lều: vật liệu không bị trừ lần nữa, tiến độ và việc được giữ nguyên.
 - Chạy trên màn hình máy tính 1280×800 và trên điện thoại (iPhone 13, Pixel 7) bằng chuột lẫn thao tác chạm.
 
+## Làng tự vận hành và phát triển (bản cập nhật)
+
+- **Tự động:** mỗi người rảnh tự chọn việc hợp nghề theo nhu cầu của làng (thu hoạch, gieo hạt, dọn đất, xây, hái quả, đi săn theo cặp, đốn gỗ, nhặt đá). Làng tự dựng lều khi thiếu chỗ ngủ, tự nâng cấp kho, tự mở thêm ruộng. Nút **Tự động** dưới cùng để bật/tắt, chọn ưu tiên (Cân bằng / Thức ăn / Xây dựng / Mở rộng) và bật tự sang ngày mới. Việc bạn giao tay luôn được ưu tiên.
+- **Dân số:** mỗi đêm, nếu còn chỗ ngủ trống, thức ăn đủ từ 3 ngày và tinh thần trung bình từ 55, có thể có người lang thang xin gia nhập; cặp thân thiết (gắn kết từ 70) có thể sinh con. Trẻ con lớn sau 4 ngày rồi mới làm việc.
+- **Mở mang:** bản đồ mới 48×36 có bãi cạn qua sông và bãi săn thứ hai bên bờ đông; mở ruộng mới trên bãi cỏ trống; gốc cây mọc thành cây con rồi thành cây; đá tảng mới lộ ra ở nền đá.
+- **Công trình mới:** Giàn phơi thịt (mở khóa khi có 7 người: +30 sức chứa thức ăn, thịt săn +25%), Kho lương (9 người: +60 sức chứa thức ăn), Nhà dài (10 người: chỗ ngủ cho 6). Dân làng đi xuyên qua mọi công trình nên không bị kẹt.
+- Bản lưu cũ vẫn chơi tiếp được trên bản đồ cũ 36×28 với đầy đủ tính năng mới; chọn **Chơi mới** để có bản đồ lớn.
+
 ## Mở rộng sau bản đầu
 
 Mùa khô và mùa mưa, đánh cá, thuần dưỡng thú, chế tác, truyền nghề và trao đổi với bộ lạc lân cận.
