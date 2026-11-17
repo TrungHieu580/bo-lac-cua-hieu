@@ -89,7 +89,11 @@ const SIM = (() => {
   // ---------------- DI CHUYỂN ----------------
   function goTo(v, goals, next, dest) {
     let [sx, sy] = tileOf(v);
-    if (!WORLD.walkable(sx, sy)) { const [nx, ny] = WORLD.nearestWalkable(sx, sy); [v.x, v.y] = tileCenter(nx, ny); sx = nx; sy = ny; }
+    if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) {
+      // bị kẹt (ví dụ trong khoảng trống bị lều bao kín): bước ra ô gần nhất của vùng chính
+      const [nx, ny] = WORLD.nearestMain(sx, sy);
+      if (nx !== sx || ny !== sy) { [v.x, v.y] = tileCenter(nx, ny); sx = nx; sy = ny; }
+    }
     const path = WORLD.findPath(sx, sy, goals);
     if (!path) return false;
     const jit = ((v.id * 5) % 7) - 3;
@@ -144,7 +148,7 @@ const SIM = (() => {
   function check(spec, vs) {
     vs = vs || [];
     const o = spec.target ? WORLD.byId(spec.target) : null;
-    const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy)) [sx, sy] = WORLD.nearestWalkable(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
+    const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
     const needPeople = (n) => vs.length < n ? (n - vs.length === 1 ? `Cần thêm một thành viên` : `Cần thêm ${n - vs.length} thành viên`) : null;
     switch (spec.type) {
       case 'gather': {
@@ -280,20 +284,13 @@ const SIM = (() => {
       if (WORLD.objAt(tx, ty)) return { ok: false, msg: 'Ô này đã có vật cản' };
     }
     if (Math.hypot(x + 1 - (f.x + 0.5), y + 1 - (f.y + 0.5)) > CFG.BUILD_RADIUS) return { ok: false, msg: 'Lều phải dựng gần bếp lửa' };
-    // không được chặn đường từ bếp lửa tới kho
-    const tmp = { type: 'site', x, y, w: 2, h: 2 };
-    S.objects.push(tmp); WORLD.rebuild();
-    const a = WORLD.ringTiles(f), b = WORLD.ringTiles(WORLD.storage());
-    const ok = a.length && b.length && !!WORLD.findPath(a[0][0], a[0][1], b);
-    S.objects.pop(); WORLD.rebuild();
-    if (!ok) return { ok: false, msg: 'Vị trí này chặn lối đi trong trại' };
     return { ok: true };
   }
 
   function unstickAll() {
     for (const v of S.villagers) {
       const [tx, ty] = tileOf(v);
-      if (!WORLD.walkable(tx, ty)) { const [nx, ny] = WORLD.nearestWalkable(tx, ty); [v.x, v.y] = tileCenter(nx, ny); v.task = null; }
+      if (!WORLD.walkable(tx, ty) || !WORLD.inMain(tx, ty)) { const [nx, ny] = WORLD.nearestMain(tx, ty); [v.x, v.y] = tileCenter(nx, ny); v.task = null; }
     }
   }
 
@@ -421,8 +418,9 @@ const SIM = (() => {
   function jobFail(v, msg) { v.job = null; v.task = null; v.note = msg; EV.emit('toast', `${v.name}: ${msg}`); }
 
   function seatFor(v) {
-    const ring = WORLD.ringTiles(WORLD.fire());
-    return ring.length ? ring[(v.id - 1) % ring.length] : null;
+    const all = WORLD.ringTiles(WORLD.fire());
+    const ring = all.filter(([x, y]) => WORLD.inMain(x, y));
+    return ring.length ? ring[(v.id - 1) % ring.length] : (all[0] || null);
   }
   function goFire(v, kind) {
     const seat = seatFor(v);
@@ -788,6 +786,7 @@ const SIM = (() => {
       if (tile) [v.x, v.y] = tileCenter(tile[0], tile[1]);
       delete v._hut;
     }
+    unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
     EV.emit('newDay');
   }

@@ -36,14 +36,17 @@ const GAME = (() => {
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.1) dt = 0.1;
+    if (!(dt > 0)) dt = 0;
     if (running && !UI.state.paused && !UI.state.modal && !S.dayEndPending) {
       SIM.step(dt / CFG.SECONDS_PER_HOUR * S.speed);
       saveAcc += dt;
       if (saveAcc > 5) { saveAcc = 0; save(); }
     }
-    if (window.S) RENDER.draw(dt);
-    if (running) UI.update(dt);
     requestAnimationFrame(frame);
+    try {
+      if (window.S) RENDER.draw(dt);
+      if (running) UI.update(dt);
+    } catch (e) { console.error(e); }
   }
 
   // ---------------- ĐIỀU KHIỂN ----------------

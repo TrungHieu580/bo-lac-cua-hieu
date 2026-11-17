@@ -6,9 +6,11 @@ const WORLD = (() => {
   const W = CFG.MAP_W, H = CFG.MAP_H, T = CFG.TILE;
   const TER = ['grass', 'forest', 'dirt', 'sand', 'water', 'cliff', 'rock', 'meadow', 'farm'];
   const TI = {}; TER.forEach((n, i) => TI[n] = i);
-  const BLOCKING = { tree: 1, bush: 1, boulder: 1, fire: 1, storage: 1, hut: 1, site: 1 };
+  // Lều và lều đang dựng không chặn đường: dân làng đi xuyên qua được
+  const BLOCKING = { tree: 1, bush: 1, boulder: 1, fire: 1, storage: 1 };
 
   let block = new Uint8Array(W * H);
+  let region = null;
 
   const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const idx = (x, y) => y * W + x;
@@ -20,6 +22,7 @@ const WORLD = (() => {
 
   function rebuild() {
     block = new Uint8Array(W * H);
+    region = null;
     for (const o of S.objects) {
       if (!BLOCKING[o.type]) continue;
       for (let j = 0; j < o.h; j++) for (let i = 0; i < o.w; i++) if (inb(o.x + i, o.y + j)) block[idx(o.x + i, o.y + j)] = 1;
@@ -96,6 +99,34 @@ const WORLD = (() => {
     for (let r = 0; r < 8; r++) for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++)
       if (walkable(x, y)) return [x, y];
     return [tx, ty];
+  }
+
+  // Vùng chính: mọi ô đi được nối liền với kho. Ô bị lều/vật cản bao kín sẽ nằm ngoài vùng này.
+  function mainRegion() {
+    if (region) return region;
+    region = new Uint8Array(W * H);
+    const st = storage();
+    if (!st) return region;
+    const q = [];
+    for (const [x, y] of ringTiles(st)) { const i = idx(x, y); if (!region[i]) { region[i] = 1; q.push(i); } }
+    const D = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+    while (q.length) {
+      const c = q.pop(), cx = c % W, cy = (c / W) | 0;
+      for (const [dx, dy] of D) {
+        const nx = cx + dx, ny = cy + dy;
+        if (!walkable(nx, ny)) continue;
+        if (dx && dy && (!walkable(cx + dx, cy) || !walkable(cx, cy + dy))) continue;
+        const ni = idx(nx, ny);
+        if (!region[ni]) { region[ni] = 1; q.push(ni); }
+      }
+    }
+    return region;
+  }
+  function inMain(x, y) { return inb(x, y) && mainRegion()[idx(x, y)] === 1; }
+  function nearestMain(tx, ty) {
+    for (let r = 0; r < 14; r++) for (let y = ty - r; y <= ty + r; y++) for (let x = tx - r; x <= tx + r; x++)
+      if (Math.max(Math.abs(x - tx), Math.abs(y - ty)) === r && inMain(x, y)) return [x, y];
+    return nearestWalkable(tx, ty);
   }
 
   // ---------------- TẠO BẢN ĐỒ ----------------
@@ -228,5 +259,5 @@ const WORLD = (() => {
     }
   }
 
-  return { W, H, T, TER, TI, ter, setTer, walkable, passTer, rebuild, objAt, byId, addObj, removeObj, fire, storage, ringTiles, insideTiles, findPath, nearestWalkable, generate, inb, idx, BLOCKING };
+  return { W, H, T, TER, TI, ter, setTer, walkable, passTer, rebuild, objAt, byId, addObj, removeObj, fire, storage, ringTiles, insideTiles, findPath, nearestWalkable, mainRegion, inMain, nearestMain, generate, inb, idx, BLOCKING };
 })();
