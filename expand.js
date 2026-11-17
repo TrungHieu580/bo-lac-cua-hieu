@@ -37,7 +37,7 @@ const EXP = (() => {
   function migrate(s) {
     if (s.auto === undefined) s.auto = CFG.AUTO.defaultOn;
     if (!s.priority) s.priority = 'balanced';
-    if (s.autoSkipNight === undefined) s.autoSkipNight = false;
+    if (s.autoSkipV !== 2) { s.autoSkipNight = true; s.autoSkipV = 2; } // mặc định tự sang ngày mới
     if (!s.mapW) { s.mapW = s.terrain.length === 36 * 28 ? 36 : CFG.MAP_W; s.mapH = s.terrain.length / s.mapW; }
     if (!s.pop) s.pop = { lastBirth: 0, arrivals: 0, births: 0, initBoulders: s.objects.filter(o => o.type === 'boulder').length };
     s.villagers.forEach(v => { if (v.child === undefined) v.child = false; });
@@ -605,11 +605,13 @@ const EXP = (() => {
   }
 
   function autoSkip(j) {
-    if (!S.autoSkipNight || j.newlyReached || j.failed) return false;
+    if (!S.autoSkipNight) return false;
     setTimeout(() => {
       if (!S.dayEndPending) return;
       SIM.startNewDay(); GAME.save();
-      UI.toast(`Hết ngày ${j.day}: +${j.foodIn} thức ăn${j.missing.length ? ` · thiếu ăn: ${j.missing.join(', ')}` : ''}. Sang ngày ${S.day}.`);
+      if (j.newlyReached) UI.toast(`Bộ lạc đã hoàn thành mục tiêu vào ngày ${j.day}! Làng tiếp tục phát triển.`, 'ok');
+      else if (j.failed) UI.toast(`Hết ngày ${j.day} nhưng chưa đạt đủ mục tiêu — làng vẫn tiếp tục.`, 'err');
+      UI.toast(`Hết ngày ${j.day}: +${j.foodIn} thức ăn${j.missing.length ? ` · thiếu ăn: ${j.missing.join(', ')}` : ''}${j.built.length ? ` · xong: ${j.built.join(', ')}` : ''}. Sáng ngày ${S.day} — ${S.weather === 'rain' ? 'trời mưa' : 'trời nắng'}.`);
     }, 30);
     return true;
   }
@@ -645,7 +647,7 @@ const EXP = (() => {
         <button class="btn ${S.auto ? 'go' : ''}" data-act="ex-auto">${S.auto ? 'Đang bật' : 'Đang tắt'}</button></div>
       <div class="chips-label">Ưu tiên của làng:</div>
       <div class="chips">${PRIOS.map(([k, n]) => `<button class="chip ${S.priority === k ? 'on' : ''}" data-act="ex-prio-${k}"><span>${n}</span></button>`).join('')}</div>
-      <div class="act"><div class="act-main"><b>Tự sang ngày mới</b><small>Không dừng ở nhật ký cuối ngày (vẫn dừng khi đạt hoặc trượt mục tiêu). Xem lại trong Nhật ký.</small></div>
+      <div class="act"><div class="act-main"><b>Tự sang ngày mới</b><small>Hết ngày tự sang sáng hôm sau, chỉ hiện tóm tắt ngắn. Tắt đi nếu muốn đọc nhật ký cuối ngày mỗi tối (vẫn xem lại được trong nút Nhật ký).</small></div>
         <button class="btn ${S.autoSkipNight ? 'go' : ''}" data-act="ex-skip">${S.autoSkipNight ? 'Đang bật' : 'Đang tắt'}</button></div>
       <div class="jsec"><h4>Kế hoạch của làng</h4><div id="ex-plan" class="sheet-sub"></div></div>
       <div class="jsec"><h4>Dân số</h4><div id="ex-pop" class="sheet-sub"></div></div>`;
