@@ -65,12 +65,12 @@ const UI = (() => {
     const el = $('#goals');
     const row = (ok, txt) => `<li class="${ok ? 'ok' : ''}"><span class="ck">${ok ? '✓' : '○'}</span>${txt}</li>`;
     const head = S.goalReached ? `Mục tiêu đã đạt (ngày ${S.goalDay}) — chơi tiếp tự do` : `Mục tiêu · trước hết ngày ${CFG.GOAL.day}`;
-    const html = `<div class="g-head">${head}<span class="g-tog">${el.classList.contains('min') ? '▸' : '▾'}</span></div><ul>
+    const html = `<div class="g-head">${head}<span class="g-tog">${el.classList.contains('min') ? '▸' : '▾'}</span></div>${S.goalReached && window.QST ? '' : `<ul>
       ${row(g.huts >= g.hutsNeed, `Dựng lều: ${g.huts}/${g.hutsNeed}`)}
       ${row(g.fields >= g.fieldsNeed, `Thu hoạch ruộng: ${g.fields}/${g.fieldsNeed}`)}
       ${row(g.food >= g.foodNeed, `Dự trữ 2 ngày ăn: ${g.food}/${g.foodNeed}`)}
       ${row(g.healthy >= g.healthyNeed, `Thành viên khỏe: ${g.healthy}/${g.healthyNeed}`)}
-    </ul>`;
+    </ul>`}${window.QST ? QST.goalsHTML() : ''}`;
     if (el._last !== html) { el.innerHTML = html; el._last = html; }
   }
 
@@ -471,6 +471,8 @@ const UI = (() => {
         <li>Nhân vật tự tìm đường, làm việc và mang đồ về kho. Tài nguyên chỉ được cộng khi mang về tới kho.</li>
         <li>18:00 mọi người về bếp lửa, 19:00 mỗi người ăn 1 khẩu phần, 20:30 ai về lều nấy ngủ (Zzz trên lều). Vợ chồng ngủ chung một lều riêng (trái tim trên lều) mới có thể có con.</li>
         <li><b>Bộ lạc:</b> chạm vào lửa trại để nâng cấp — cấp lửa trại là cấp bộ lạc (5 cấp), tăng dân số tối đa, bán kính xây dựng, mở khóa Mỏ đá, Tiên tri (cấp 2), Vu sư (cấp 3). Hiếu là Tù trưởng (đội mũ lông): tù trưởng khỏe thì cả làng làm nhanh hơn.</li>
+        <li><b>Nhiệm vụ:</b> ô Mục tiêu hiện 3 nhiệm vụ đang làm; xong thì bấm <b>Nhận</b> để lấy thưởng (gỗ, đá, thức ăn, giáo, kỹ năng, phúc lành...). Để quá 2 ngày thì làng tự nhận. Danh sách đủ ở bảng Tự động.</li>
+        <li><b>Nhà chữa bệnh:</b> người có sức khỏe dưới 45 tự vào nằm chữa (dấu cộng xanh trên mái), hồi nhanh, vu sư tới chăm thì càng nhanh.</li>
         <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>
         <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
         <li><b>Camera:</b> kéo để di chuyển, cuộn chuột / chụm hai ngón để phóng to. Phím: WASD/mũi tên, Space tạm dừng, 1-2-3 tốc độ, B xây dựng, V dân làng, J nhật ký, Esc đóng.</li>
@@ -537,6 +539,12 @@ const UI = (() => {
       else if (b.id === 'b-speed') cycleSpeed();
       else if (b.id === 'b-menu') showMenu(true);
     });
+    document.addEventListener('click', (e) => { // nút nhận thưởng nhiệm vụ (ô Mục tiêu và bảng Tự động)
+      const c = e.target.closest('[data-claim]');
+      if (!c || !window.QST) return;
+      e.stopPropagation(); e.preventDefault();
+      QST.claim(c.dataset.claim); $('#goals')._last = ''; updateGoals(); refresh();
+    }, true);
     $('#goals').addEventListener('click', () => { $('#goals').classList.toggle('min'); $('#goals')._last = ''; updateGoals(); });
     $('#selbar').addEventListener('click', (e) => {
       if (e.target.closest('#sb-clear')) { state.selected.clear(); refresh(); return; }

@@ -52,6 +52,15 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; col
 #goals li, .goal-list li { padding: 1px 0; }
 #goals li.ok, .goal-list li.ok { color: #b8f08a; }
 .ck { display: inline-block; width: 16px; font-weight: 700; }
+.q-head { margin-top: 6px; border-top: 1px solid rgba(255,224,138,.25); padding-top: 4px; }
+.q-new { color: #9be067; }
+#goals li.q { padding: 3px 0; }
+.q-t small { opacity: .8; }
+.q-bar { height: 4px; background: #5a3a1c; border-radius: 2px; margin: 2px 0 1px 16px; overflow: hidden; }
+.q-bar i { display: block; height: 100%; background: #f2c94c; }
+.q-r { font-size: 11px; opacity: .8; margin-left: 16px; }
+#goals .q-claim { display: block; max-width: calc(100% - 16px); margin: 3px 0 0 16px; font-size: 11.5px; white-space: normal; text-align: left; line-height: 1.25; animation: alarm 1s infinite alternate; }
+.q-ready { color: #b8f08a; }
 
 #toasts { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; width: min(92%, 460px); }
 .toast { background: rgba(40, 24, 10, .93); border: 2px solid #c9a066; color: var(--cream); padding: 7px 12px; border-radius: 8px; font-size: 13.5px; box-shadow: 0 3px 10px rgba(0,0,0,.5); transition: opacity .4s, transform .4s; text-align: center; }

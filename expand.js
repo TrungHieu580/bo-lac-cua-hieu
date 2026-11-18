@@ -13,7 +13,7 @@ const EXP = (() => {
   const pick = (a) => a[Math.floor(rand() * a.length)];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const SK = CFG.SKILL_NAMES;
-  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop', 'watchtower'];
+  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop', 'watchtower', 'sickhouse'];
   const DESC = {
     hut: `Chỗ ngủ cho ${CFG.HUT.sleepers} người, hồi phục tốt hơn.`,
     rack: `+${B.rack.foodCap} sức chứa thức ăn, thịt săn được +${Math.round(B.rack.meatBonus * 100)}%.`,
@@ -21,6 +21,7 @@ const EXP = (() => {
     longhouse: `Chỗ ngủ cho ${B.longhouse.beds} người.`,
     healer: `Mỗi đêm mọi người hồi thêm ${CFG.HEALER.heal} sức khỏe, vết thương mau lành.`,
     workshop: `Công cụ tốt hơn: xây dựng, đốn gỗ, nhặt đá nhanh hơn ${Math.round((CFG.WORKSHOP.buildBonus - 1) * 100)}%; chế giáo đá nhanh hơn.`,
+    sickhouse: `Người bị thương hoặc ốm (sức khỏe dưới ${CFG.CARE.goAt}) vào nằm chữa, hồi ${CFG.CARE.healRate} sức khỏe mỗi giờ (nhanh hơn khi có vu sư chăm). Chứa ${CFG.CARE.patients} người bệnh.`,
     watchtower: `Người canh gác đứng gác ở đây; phát hiện thú dữ từ xa để dân kịp chạy về bếp lửa, người gác đánh mạnh hơn ${Math.round((CFG.DEFENSE.towerBonus - 1) * 100)}% khi ở gần chòi.`,
   };
 
@@ -56,6 +57,7 @@ const EXP = (() => {
     if (s.planNote === undefined) s.planNote = '';
     if (window.DEF) DEF.migrate(s);
     if (window.TRB) TRB.migrate(s);
+    if (window.QST) QST.migrate(s);
   }
 
   // ---------------- SPRITE MỚI ----------------
@@ -137,7 +139,7 @@ const EXP = (() => {
     }
     return SP;
   }
-  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; return sprites()[k] || ART.SPR.hut; }
+  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; if (k === 'sickhouse' && window.TRB) return TRB.SPR.sickhouse; return sprites()[k] || ART.SPR.hut; }
 
   function drawObj(o, X, Y, lx) {
     const sp = sprites();
@@ -533,6 +535,7 @@ const EXP = (() => {
       else if (window.TRB && TRB.wantFire()) want = 'fire';
       else if (unlocked('granary') && count('granary') < B.granary.max && st.level >= CFG.STORAGE_CAP.length - 1 && S.res.food >= SIM.cap('food') * 0.85) { want = 'granary'; S.planNote = 'Kho thức ăn sắp đầy — xây thêm kho lương'; }
       else if (st.level === 0 && pop >= 8) want = 'upgrade';
+      else if (unlocked('sickhouse') && count('sickhouse') < (pop >= 22 ? 2 : 1) && (pop >= 8 || S.villagers.some(v => v.health < CFG.CARE.goAt))) want = 'sickhouse';
       else if (unlocked('rack') && count('rack') < (pop >= 14 ? 2 : 1)) want = 'rack';
       else if (unlocked('watchtower') && count('watchtower') < (pop >= 20 ? 2 : 1) && S.def && S.def.attacks > 0) want = 'watchtower';
       else if (unlocked('granary') && count('granary') < (pop >= 18 ? 2 : 1)) want = 'granary';
@@ -567,6 +570,12 @@ const EXP = (() => {
     }
   }
 
+  // Cân bằng gỗ và đá: giữ tỉ lệ gỗ : đá quanh CFG.GATHER_RATIO, bên nào thiếu thì được ưu tiên đi khai thác
+  function gatherBias() {
+    const R = CFG.GATHER_RATIO, r = (S.res.wood + 6) / ((S.res.stone + 6) * R);
+    if (r < 1) return { wood: Math.min(3, 1 / r), stone: Math.max(0.25, r), note: 'ưu tiên đốn gỗ' };
+    return { wood: Math.max(0.25, 1 / r), stone: Math.min(3, r), note: r > 1.15 ? 'ưu tiên khai thác đá' : 'cân bằng' };
+  }
   function context() {
     const fd = SIM.foodDays(), cap = SIM.cap('food');
     const foodW = S.res.food >= cap - 2 ? 0 : fd < 1.5 ? 10 : fd < 3 ? 6 : fd < 5 ? 3 : 1.5;
@@ -575,8 +584,9 @@ const EXP = (() => {
     const seedW = needSeeds && S.res.seeds < CFG.FARM.seedCost * 2 ? (S.res.food >= cap - 2 ? 2 : 5) : 0;
     const c = want ? costOf(want) : null;
     const lackW = c ? Math.max(0, c.wood - S.res.wood) : 0, lackS = c ? Math.max(0, c.stone - S.res.stone) : 0;
-    const woodW = S.res.wood >= SIM.cap('wood') - 2 ? 0 : lackW > 0 ? 5 : S.res.wood < 12 ? 2 : 0.8;
-    const stoneW = S.res.stone >= SIM.cap('stone') - 2 ? 0 : lackS > 0 ? 5 : S.res.stone < 20 ? 2.5 : 1.2;
+    const gb = gatherBias();
+    const woodW = S.res.wood >= SIM.cap('wood') - 2 ? 0 : (lackW > 0 ? 5 : S.res.wood < 12 ? 2.5 : 1.4) * gb.wood;
+    const stoneW = S.res.stone >= SIM.cap('stone') - 2 ? 0 : (lackS > 0 ? 5 : S.res.stone < 12 ? 2.5 : 1.4) * gb.stone;
     const zone = S.objects.filter(o => o.type === 'huntzone' && o.animals >= 2).sort((a, b) => b.animals - a.animals)[0];
     const canHunt = !!zone && S.weather === 'sun' && S.hour < 12.5 && !S.hunts.length && foodW >= 1.5;
     const waiting = plots.filter(p => p.state === 'cleared' && !p.seeded && p.yieldLeft <= 0).length;
@@ -837,6 +847,7 @@ const EXP = (() => {
     if (v.pregnant > 0) m *= CFG.FAMILY.pregnantWork;
     if (skill === 'build' && count('workshop')) m *= CFG.WORKSHOP.buildBonus;
     if (window.TRB) m *= TRB.workMult(v, skill);
+    if (window.QST) m *= QST.workMult();
     return m;
   }
   function chatPair(a, b) {
@@ -921,6 +932,7 @@ const EXP = (() => {
         <button class="btn ${S.autoSkipNight ? 'go' : ''}" data-act="ex-skip">${S.autoSkipNight ? 'Đang bật' : 'Đang tắt'}</button></div>
       <div class="jsec"><h4>Kế hoạch của làng</h4><div id="ex-plan" class="sheet-sub"></div></div>
       <div class="jsec"><h4>Dân số & gia đình</h4><div id="ex-pop" class="sheet-sub"></div></div>
+      ${window.QST ? QST.panelHTML() : ''}
       ${window.TRB ? TRB.panelHTML() : ''}
       ${window.DEF ? DEF.panelHTML() : ''}
       <div class="jsec"><h4>Mở khóa theo dân số</h4><div id="ex-unlock" class="sheet-sub"></div></div>`;
@@ -935,7 +947,8 @@ const EXP = (() => {
       tally[t] = (tally[t] || 0) + 1;
     }
     const busy = Object.entries(tally).map(([k, n]) => `${n} ${k}`).join(', ');
-    const htmlPlan = `${S.auto ? '' : '<b>Tự động đang tắt.</b> '}${S.planNote ? esc(S.planNote) + '<br>' : ''}Đang làm: ${busy || '—'}<br>Ruộng: ${count('plot')} · Cây con đang mọc: ${count('sapling')} · Đá tảng: ${count('boulder')}`;
+    const gbn = gatherBias();
+    const htmlPlan = `${S.auto ? '' : '<b>Tự động đang tắt.</b> '}${S.planNote ? esc(S.planNote) + '<br>' : ''}Đang làm: ${busy || '—'}<br>Gỗ ${S.res.wood} · đá ${S.res.stone} (giữ tỉ lệ khoảng ${CFG.GATHER_RATIO} : 1) — ${gbn.note}<br>Ruộng: ${count('plot')} · Cây con đang mọc: ${count('sapling')} · Đá tảng: ${count('boulder')}`;
     if (plan._last !== htmlPlan) { plan.innerHTML = htmlPlan; plan._last = htmlPlan; }
     const P = CFG.POP, pop = S.villagers.length, free = beds() - pop, fd = SIM.foodDays(), mo = avgMorale();
     const kids = S.villagers.filter(v => v.child).length;
@@ -952,6 +965,7 @@ const EXP = (() => {
     if (popEl._last !== htmlPop) { popEl.innerHTML = htmlPop; popEl._last = htmlPop; }
     if (window.DEF) DEF.updatePanel(p);
     if (window.TRB) TRB.updatePanel(p);
+    if (window.QST) QST.updatePanel(p);
     const un = p.querySelector('#ex-unlock');
     if (un) {
       const htmlUn = UNLOCKS().map(([need, name]) => row(pop >= need, `${need} người: ${name}`)).join('');
@@ -975,7 +989,7 @@ const EXP = (() => {
     migrate, generate, spriteFor, drawObj, drawChild, foodCapBonus, meatMult, buildRadius, bname, bdesc, beds, popText,
     handles, check, assign, ghostFor, placeActions, tileActions, plotSpotAt, snapBuild, freeSlots, popLimit, buildPanelHTML, autoPanelHTML, updateAutoPanel, onPanelAct,
     tick, overnight, autoSkip, findSpot, findPlotSpot, createPlot,
-    upgradeCost, workMult, chatPair, familyText, objActions, drawFishCarry,
+    upgradeCost, workMult, chatPair, familyText, objActions, drawFishCarry, newcomer, gatherBias, count,
   };
 })();
 window.EXP = EXP;

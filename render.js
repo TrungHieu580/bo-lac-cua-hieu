@@ -105,7 +105,7 @@ const RENDER = (() => {
     if (t.kind === 'walk') return 'walk';
     if (t.kind === 'work' || t.kind === 'hunting' || t.kind === 'fight' || t.kind === 'craft') return 'work';
     if (t.kind === 'cower' || t.kind === 'pray') return 'sit';
-    if (t.kind === 'heal') return 'work';
+    if (t.kind === 'heal' || t.kind === 'healHouse') return 'work';
     if (t.kind === 'ritual') return 'walk';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
@@ -384,7 +384,13 @@ const RENDER = (() => {
       const adults = vs.filter(v => !v.child);
       const couple = h.type === 'hut' && adults.length === 2 && adults[0].partner === adults[1].id;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      if (couple) {
+      if (h.type === 'sickhouse') { // dấu cộng xanh: có người đang nằm chữa
+        const yy = sy - 4 * dpr + b, r = 5 * dpr, w = 3 * dpr;
+        ctx.fillStyle = '#1a3a12'; ctx.fillRect(sx - r - dpr, yy - w / 2 - dpr, 2 * r + 2 * dpr, w + 2 * dpr); ctx.fillRect(sx - w / 2 - dpr, yy - r - dpr, w + 2 * dpr, 2 * r + 2 * dpr);
+        ctx.fillStyle = '#7ae05a'; ctx.fillRect(sx - r, yy - w / 2, 2 * r, w); ctx.fillRect(sx - w / 2, yy - r, w, 2 * r);
+        ctx.font = `bold ${Math.round(10 * dpr)}px system-ui`; ctx.fillStyle = '#e8ffe0'; ctx.fillText(String(vs.length), sx + 11 * dpr, yy);
+      }
+      else if (couple) {
         const pulse = 1 + Math.sin(time * 4 + hid) * 0.12;
         ctx.font = `bold ${Math.round(15 * dpr * pulse)}px system-ui`;
         ctx.lineWidth = 3 * dpr; ctx.strokeStyle = '#4a0e1e'; ctx.strokeText('♥', sx, sy - 4 * dpr + b);
@@ -401,7 +407,7 @@ const RENDER = (() => {
       }
       if (ui.selected.size) {
         const sel = vs.filter(v => ui.selected.has(v.id));
-        if (sel.length) label(sel.map(v => v.name).join(', ') + (couple ? ' · vợ chồng chung lều' : ' · đang ngủ'), sx, sy - 22 * dpr);
+        if (sel.length) label(sel.map(v => v.name).join(', ') + (h.type === 'sickhouse' ? ' · đang chữa bệnh' : couple ? ' · vợ chồng chung lều' : ' · đang ngủ'), sx, sy - 22 * dpr);
       }
     }
     // nhãn tên + biểu tượng việc cho người được chọn, Zzz cho người nghỉ

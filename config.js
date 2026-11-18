@@ -102,6 +102,7 @@ window.CFG = {
     healer:    { name: 'Lều thảo dược',  w: 2, h: 2, wood: 10, stone: 6,  hours: 10, unlock: 12, max: 1 },
     workshop:  { name: 'Xưởng chế tác',  w: 2, h: 2, wood: 14, stone: 10, hours: 12, unlock: 14, max: 1 },
     watchtower: { name: 'Chòi canh',     w: 2, h: 2, wood: 8,  stone: 4,  hours: 8,  unlock: 8,  max: 2 },
+    sickhouse: { name: 'Nhà chữa bệnh',  w: 3, h: 2, wood: 12, stone: 8,  hours: 10, unlock: 6,  max: 2 },
   },
 
   // Cấp lửa trại = cấp bộ lạc
@@ -121,6 +122,8 @@ window.CFG = {
   },
   ROLES: { chiefName: 'Hiếu', healRate: 30, healHours: 0.6, rainChance: 0.5, prophetMorale: 3, shamanHunt: 0.05, warnedBonus: 1.2 },
   QUARRY: { spots: 3 },
+  CARE: { healRate: 10, patients: 4, goAt: 45, shamanBonus: 8 }, // Nhà chữa bệnh: người sức khỏe dưới 45 vào nằm chữa, hồi 10/giờ (+8 khi có vu sư chăm)
+  GATHER_RATIO: 1.3,       // tỉ lệ gỗ : đá mà làng cố giữ khi đi khai thác
 
   // Dụng cụ săn bắn: giáo đá — chế ở bếp lửa (hoặc xưởng chế tác, nhanh hơn)
   TOOLS: {

@@ -462,7 +462,7 @@ const SIM = (() => {
     const free = new Map(huts.map(h => [h.id, bedsOf(h)]));
     const occ = new Map(huts.map(h => [h.id, 0]));
     const put = (v, h) => { v.bed = h.id; free.set(h.id, free.get(h.id) - 1); occ.set(h.id, occ.get(h.id) + 1); };
-    S.villagers.forEach(v => { v.bed = 0; });
+    S.villagers.forEach(v => { v.bed = v.task && v.task.kind === 'treat' ? -1 : 0; }); // người đang nằm Nhà chữa bệnh không cần giường
     const coupleHut = new Set();
     for (const f of S.villagers.filter(v => !v.child && v.partner && v.sex === 'f')) {
       const m = vById(f.partner);
@@ -502,7 +502,7 @@ const SIM = (() => {
     }
     return out;
   }
-  const asleep = (v) => v.task && (v.task.kind === 'sleep' || v.task.kind === 'sleepout');
+  const asleep = (v) => v.task && (v.task.kind === 'sleep' || v.task.kind === 'sleepout' || v.task.kind === 'treat');
 
   function idle(v) {
     const f = WORLD.fire();
@@ -531,6 +531,7 @@ const SIM = (() => {
       v.resting = true; v.restKind = 'tired'; v.restReason = 'Quá mệt — bỏ việc để nghỉ bên lửa';
       event(`${v.name} quá mệt nên bỏ việc để nghỉ.`);
     }
+    if (window.TRB && TRB.planTreat(v)) return;
     if (v.resting) { if (v.carry) return goDeposit(v); return goFire(v, 'rest'); }
     if (v.carry) return goDeposit(v);
     const j = v.job;
@@ -775,7 +776,7 @@ const SIM = (() => {
 
   function onBedtime() {
     assignBeds();
-    for (const v of S.villagers) if (v.task && v.task.kind !== 'deposit') v.task = null;
+    for (const v of S.villagers) if (v.task && v.task.kind !== 'deposit' && v.task.kind !== 'treat') v.task = null;
     const out = S.villagers.filter(v => !v.bed).length;
     log(out ? `Đêm xuống — mọi người về lều ngủ; ${out} người không còn chỗ phải ngủ ngoài trời bên lửa.` : 'Đêm xuống — mọi người về lều của mình để ngủ.');
   }
@@ -847,10 +848,11 @@ const SIM = (() => {
       else if (S.weather === 'rain') { v.energy = clamp(v.energy + E.sleepRain, 0, 100); v.morale = clamp(v.morale + CFG.MORALE.rainNight, 0, 100); }
       else v.energy = clamp(v.energy + E.sleepOutside, 0, 100);
       if (v.fedToday) v.health = clamp(v.health + CFG.HEALTH.night, 0, 100);
-      v._hut = hut ? hut.id : null;
-      delete v.bed; v.inside = 0;
+      const treating = v.task && v.task.kind === 'treat';
+      v._hut = hut && !treating ? hut.id : null;
+      delete v.bed; if (!treating) v.inside = 0;
       if (v.restKind !== 'sick') { v.resting = false; v.restKind = ''; v.restReason = ''; }
-      v.task = null;
+      if (!treating) v.task = null;
     });
     // Thiên nhiên qua đêm
     for (const o of S.objects) {
@@ -874,6 +876,7 @@ const SIM = (() => {
     S.today = freshToday();
     // vị trí buổi sáng
     for (const v of S.villagers) {
+      if (v.inside) { delete v._hut; continue; } // vẫn đang nằm chữa bệnh
       const hut = v._hut ? WORLD.byId(v._hut) : null;
       let tile = hut ? WORLD.nearestWalkable(hut.x + 1, hut.y + 2) : seatFor(v);
       if (tile) [v.x, v.y] = tileCenter(tile[0], tile[1]);
@@ -882,6 +885,7 @@ const SIM = (() => {
     if (window.EXP) EXP.overnight();
     if (window.DEF) DEF.overnight();
     if (window.TRB) TRB.overnight();
+    if (window.QST) QST.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
     EV.emit('newDay');
@@ -900,6 +904,7 @@ const SIM = (() => {
     updateHunts(dt);
     if (window.EXP) EXP.tick(dt);
     if (window.DEF) DEF.tick(dt);
+    if (window.QST) QST.tick(dt);
     if (S.hour >= CFG.DAY_END && (S.hour >= CFG.NIGHT_MAX || S.villagers.every(asleep))) endDay();
   }
 

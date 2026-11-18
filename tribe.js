@@ -164,6 +164,25 @@ const TRB = (() => {
     }
     return best;
   }
+  // ---------------- NHÀ CHỮA BỆNH ----------------
+  const CA = CFG.CARE;
+  const houses = () => S.objects.filter(o => o.type === 'sickhouse');
+  const patientsIn = (h) => S.villagers.filter(p => p.inside === h.id && p.task && p.task.kind === 'treat');
+  const houseDoor = (h) => [[h.x + 1, h.y + h.h - 1]];
+  function planTreat(v) {
+    const hs = houses();
+    if (!hs.length || v.carry || v.inside || (v.job && v.job.type === 'hunt')) return false;
+    if (!((v.resting && v.restKind === 'sick') || v.health < CA.goAt)) return false;
+    const h = hs.filter(x => patientsIn(x).length + S.villagers.filter(p => p.task && p.task.next && p.task.next.kind === 'enterTreat' && p.task.next.house === x.id).length < CA.patients)
+      .sort((a, b) => Math.hypot(a.x * T - v.x, a.y * T - v.y) - Math.hypot(b.x * T - v.x, b.y * T - v.y))[0];
+    if (!h) return false;
+    if (!v.resting) { v.resting = true; v.restKind = 'sick'; }
+    v.restReason = 'Đi tới Nhà chữa bệnh';
+    const next = { kind: 'enterTreat', house: h.id };
+    if (SIM.isAt(v, houseDoor(h))) { v.task = next; return true; }
+    if (!SIM.goTo(v, houseDoor(h), next) && !SIM.goTo(v, WORLD.ringTiles(h), next)) v.task = next;
+    return true;
+  }
   function toFire(v, next) {
     const ring = WORLD.ringTiles(fire()).filter(([x, y]) => WORLD.inMain(x, y));
     if (!ring.length || SIM.isAt(v, ring)) { v.task = next; return; }
@@ -177,6 +196,13 @@ const TRB = (() => {
     }
     if (j.type === 'shaman') {
       if (S.roles.shaman !== v.id) { v.job = null; return true; }
+      const hp = houses().find(h => patientsIn(h).length);
+      if (hp && !patientFor(v)) {
+        const next = { kind: 'healHouse', house: hp.id, time: 1.2 };
+        const ring = WORLD.ringTiles(hp).filter(([x, y]) => WORLD.inMain(x, y));
+        if (SIM.isAt(v, ring)) { v.task = next; return true; }
+        if (SIM.goTo(v, ring, next)) return true;
+      }
       const p = patientFor(v);
       if (p) {
         const next = { kind: 'heal', target: p.id, done: 0 };
@@ -197,6 +223,34 @@ const TRB = (() => {
         if (t.kind === 'ritual') { S.roles.ritualDay = S.day; if (patientFor(v) && t.time < 0.8) t.time = 0; }
         if (t.time <= 0) v.task = null;
         return true;
+      case 'enterTreat': {
+        const h = WORLD.byId(t.house);
+        if (!h) { v.task = null; return true; }
+        v.inside = h.id; v.task = { kind: 'treat', house: h.id };
+        v.restReason = 'Đang nằm chữa ở Nhà chữa bệnh';
+        return true;
+      }
+      case 'treat': {
+        const h = WORLD.byId(t.house);
+        if (!h) { v.inside = 0; v.task = null; return true; }
+        v.health = Math.min(100, v.health + CA.healRate * dt);
+        v.energy = clamp(v.energy + E.restRegen * dt, 0, 100);
+        if (v.health >= Math.min(100, Math.max(CA.goAt + 25, CFG.HEALTH.sickAt + 30)) && v.energy >= E.resumeAt && SIM.phase() === 'day') {
+          v.inside = 0; v.task = null; v.resting = false; v.restKind = ''; v.restReason = '';
+          const tile = WORLD.nearestWalkable(h.x + 1, h.y + h.h);
+          if (tile) { v.x = tile[0] * T + T / 2; v.y = tile[1] * T + T * 0.75; }
+          SIM.log(`${v.name} đã khỏe lại và rời Nhà chữa bệnh.`);
+        }
+        return true;
+      }
+      case 'healHouse': {
+        const h = WORLD.byId(t.house), ps = h ? patientsIn(h) : [];
+        if (!ps.length) { v.task = null; return true; }
+        for (const p of ps) p.health = Math.min(100, p.health + CA.shamanBonus * dt);
+        t.time -= dt;
+        if (t.time <= 0) v.task = null;
+        return true;
+      }
       case 'heal': {
         const p = SIM.vById(t.target);
         if (!p || p.inside || p.health >= 98 || dist(v, p) > 22) { v.task = null; return true; }
@@ -259,7 +313,7 @@ const TRB = (() => {
       const qs = S.objects.filter(o => o.type === 'quarry' && o.stock > 0 && S.villagers.filter(x => x.job && x.job.target === o.id).length < 3);
       if (qs.length) {
         const q = qs.reduce((a, b) => (Math.abs(a.x - v.x / T) + Math.abs(a.y - v.y / T)) < (Math.abs(b.x - v.x / T) + Math.abs(b.y - v.y / T)) ? a : b);
-        push(S.res.stone < 25 ? 4.5 : S.res.stone < 100 ? 2.5 : 1, 'build', 'build', { type: 'gather', target: q.id });
+        push((S.res.stone < 15 ? 3.5 : 1.8) * EXP.gatherBias().stone, 'build', 'build', { type: 'gather', target: q.id });
       }
     }
   }
@@ -272,6 +326,8 @@ const TRB = (() => {
   // ---------------- GIAO DIỆN ----------------
   function jobText(v) {
     const j = v.job, t = v.task;
+    if (t && t.kind === 'treat') return 'Đang nằm chữa ở Nhà chữa bệnh';
+    if (t && t.kind === 'healHouse') return 'Vu sư: chăm người bệnh ở Nhà chữa bệnh';
     if (SIM.phase() !== 'day') return null;
     if (j && j.type === 'upgrade' && fire() && j.target === fire().id) return 'Nâng cấp lửa trại' + (t && t.kind === 'walk' ? ' · đang đi' : '');
     if (j && j.type === 'prophet') return t && t.kind === 'pray' ? 'Tiên tri: chiêm bao bên lửa thiêng' : 'Tiên tri: đi về lửa thiêng';
@@ -342,8 +398,23 @@ const TRB = (() => {
       rect(x, 19, 13, 1, 8, '#7a4a24'); rect(x, 17, 12, 5, 1, '#8d9198'); px(x, 16, 13, '#8d9198');
       SPR[full ? 'quarry' : 'quarryEmpty'] = c;
     }
+    { // Nhà chữa bệnh 72×52: nhà sàn mái lá, treo thảo dược, nồi thuốc
+      const [c, x] = mk(72, 52);
+      for (const cx of [6, 34, 63]) { rect(x, cx, 34, 3, 18, '#6b4224'); rect(x, cx, 34, 1, 18, '#875632'); }
+      rect(x, 4, 32, 64, 4, '#8a5a30'); rect(x, 4, 32, 64, 1, '#a8743c');
+      rect(x, 8, 22, 56, 10, '#c8a878'); for (let i = 8; i < 64; i += 4) rect(x, i, 22, 1, 10, '#a8885a');
+      rect(x, 31, 24, 10, 8, '#3a2414');
+      for (let y = 0; y < 22; y++) { const off = Math.round((22 - y) * 0.9); for (let i = off; i < 72 - off; i++) px(x, i, y + 1, (y % 3 === 0) ? '#b8a04a' : (i > 52 ? '#8a7428' : '#a08a36')); }
+      rect(x, 33, 1, 6, 2, '#6b4224');
+      for (const [hx, col] of [[12, '#4fa04a'], [16, '#9a6ad0'], [20, '#4fa04a'], [50, '#e0c040'], [54, '#4fa04a'], [58, '#c86a3a']]) { rect(x, hx, 23, 1, 2, '#5a3a1c'); rect(x, hx - 1, 25, 3, 4, col); }
+      ell(x, 66, 47, 4, 3, '#4a3a2a'); ell(x, 66, 45, 3, 1, '#7ac06a'); px(x, 65, 42, '#d8e8d8'); px(x, 67, 40, '#e8f0e8');
+      // biểu tượng lá thuốc trên mái
+      ell(x, 36, 10, 4, 3, '#4fb04a'); rect(x, 36, 8, 1, 6, '#2e7a2a'); rect(x, 34, 10, 5, 1, '#2e7a2a');
+      SPR.sickhouse = c;
+    }
   } catch (e) { console.error(e); }
   function drawObj(o, X, Y, lx) {
+    if (o.type === 'sickhouse') return () => lx.drawImage(SPR.sickhouse, X, Y + o.h * T - SPR.sickhouse.height + 2);
     if (o.type !== 'quarry') return null;
     return () => lx.drawImage(o.stock > 0 ? SPR.quarry : SPR.quarryEmpty, X, Y);
   }
@@ -408,7 +479,7 @@ const TRB = (() => {
   return {
     migrate, level, info, popCap, radiusBonus, fireSafeBonus, lightMult, fireCost, wantFire, startFireUpgrade, fireUpgraded,
     ensureRoles, autoRoles, reserved, isRole, roleOf, title, overnight, planJob, task, handles, check, assign, options,
-    workMult, huntMod, jobText, fireActions, objActions, topHTML, updateTop, panelHTML, updatePanel, drawObj,
+    workMult, huntMod, jobText, planTreat, patientsIn, fireActions, objActions, topHTML, updateTop, panelHTML, updatePanel, drawObj,
     drawFireBack, drawFireFront, drawGear, SPR,
   };
 })();
