@@ -225,8 +225,10 @@ const UI = (() => {
 
   function actionsFor(p) {
     if (p.kind === 'moveto' && window.LAY) return LAY.moveActions(p);
+    if (p.kind === 'bridge' && window.LAND) return LAND.bridgeActions(p);
     const r = actionsFor0(p);
     if (window.LAY) LAY.addMoveAction(p, r);
+    if (window.LAND) LAND.addActions(p, r);
     return r;
   }
   function actionsFor0(p) {
@@ -406,6 +408,11 @@ const UI = (() => {
     if (state.popup) { closePopup(); return; }
     const tx = Math.floor(wx / T), ty = Math.floor(wy / T);
     if (!WORLD.inb(tx, ty)) return;
+    if (window.LAND && WORLD.ter(tx, ty) === 'water') { // chạm vào sông: bắc cầu
+      const br = LAND.bridgePlan(tx, ty);
+      if (br) { openPopup(Object.assign({ kind: 'bridge' }, br)); state.ghost = { x: br.x, y: br.y, w: br.w, h: br.h, ok: true, kind: 'bridge' }; return; }
+      toast('Khúc sông này quá rộng hoặc không có bờ để bắc cầu', 'err'); return;
+    }
     const hut = EXP.snapBuild('hut', wx, wy) || hutSpotAt(wx, wy);
     const hutOk = SIM.validHutSpot(hut[0], hut[1]).ok;
     if (state.selected.size || hutOk || EXP.plotSpotAt(wx, wy)) {
@@ -499,6 +506,7 @@ const UI = (() => {
         <li><b>Nhà chữa bệnh:</b> người có sức khỏe dưới 45 tự vào nằm chữa (dấu cộng xanh trên mái), hồi nhanh, vu sư tới chăm thì càng nhanh.</li>
         <li><b>Nhà bếp</b> (7 dân): một người nấu ăn mỗi chiều, bữa tối tiết kiệm thức ăn và bổ dưỡng hơn. <b>Chuồng thú</b> (9 dân): nuôi dê — có người chăn thả mỗi sáng thì dê cho sữa, sinh con; coi chừng sói vồ dê!</li>
         <li><b>Công trình đồ sộ:</b> Đền tổ tiên (bộ lạc cấp 3), Vòng đá thiêng (cấp 4), Đại sảnh tù trưởng (cấp 5) — tốn nhiều gỗ đá, cả làng góp sức nhiều ngày, đổi lại lợi ích lớn.</li>
+        <li><b>Đất đai mở rộng:</b> mỗi lần lửa trại lên cấp, bản đồ nới rộng ra mọi phía (48×36 → 80×60 ô) với rừng, đồng cỏ, đồi đá và bãi săn mới. Khi chọn chỗ xây, vòng gạch vàng là ranh giới đất làng (rộng dần theo dân số và cấp bộ lạc). Chạm cây → <b>Khai hoang</b> để đốn cây, đào gốc thành bãi cỏ trống vĩnh viễn; làng tự khai hoang khi hết chỗ. Chạm vào sông → <b>Bắc cầu</b> (4 gỗ + 1 đá mỗi ô) để sang bờ bên kia.</li>
         <li><b>Tự sắp xếp làng:</b> mở <b>Xây dựng</b> → <b>Sắp xếp</b> để gom công trình cùng loại vào từng khu (kho & chế biến, nhà ở, chữa bệnh, tâm linh, chăn nuôi, chòi canh) và xếp ruộng liền nhau thành một cánh đồng. Không ưng thì bấm <b>Hoàn tác</b>.</li>
         <li><b>Di chuyển công trình & ruộng:</b> chạm vào lều, kho, chuồng, đền, ruộng... → <b>Di chuyển</b>, rồi chạm chỗ mới và bấm <b>Chuyển</b> (miễn phí, chuyển ngay). Nút <b>Lưới: Bật/Tắt</b> để hít vào lưới cho thẳng hàng hoặc đặt tự do (máy tính: giữ Shift khi chạm).</li>
         <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>

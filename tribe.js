@@ -54,6 +54,7 @@ const TRB = (() => {
   }
   function fireUpgraded(o) {
     o.level = (o.level || 1) + 1; o.upgrading = null;
+    if (window.LAND) setTimeout(() => LAND.onLevel(), 0);
     const L = info(o.level);
     S.villagers.forEach(v => v.morale = clamp(v.morale + 8, 0, 100));
     S.today.built.push(`Lửa trại cấp ${o.level}`);

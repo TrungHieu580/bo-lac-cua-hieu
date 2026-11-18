@@ -107,18 +107,23 @@ const RENDER = (() => {
     if (t.kind === 'cower' || t.kind === 'pray') return 'sit';
     if (t.kind === 'heal' || t.kind === 'healHouse' || t.kind === 'cook') return 'work';
     if (window.SAGA && SAGA.WORK_POSE.includes(t.kind)) return 'work';
+    if (window.LAND && LAND.WORK_POSE.includes(t.kind)) return 'work';
     if (t.kind === 'ritual') return 'walk';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
   }
 
   function updateDeer(dt) {
-    const zone = S.objects.find(o => o.type === 'huntzone');
-    if (!zone) return;
-    while (deer.length < zone.animals) deer.push({ x: (zone.x + 1 + Math.random() * (zone.w - 2)) * T, y: (zone.y + 1 + Math.random() * (zone.h - 2)) * T, tx: 0, ty: 0, wait: Math.random() * 3, flip: 0 });
-    while (deer.length > zone.animals) deer.pop();
+    const zones = S.objects.filter(o => o.type === 'huntzone');
+    for (const z of zones) {
+      let n = deer.filter(d => d.z === z.id).length;
+      while (n < z.animals) { deer.push({ z: z.id, x: (z.x + 1 + Math.random() * (z.w - 2)) * T, y: (z.y + 1 + Math.random() * (z.h - 2)) * T, tx: 0, ty: 0, wait: Math.random() * 3, flip: 0 }); n++; }
+      while (n > z.animals) { deer.splice(deer.findIndex(d => d.z === z.id), 1); n--; }
+    }
+    for (let i = deer.length - 1; i >= 0; i--) if (!zones.some(z => z.id === deer[i].z)) deer.splice(i, 1);
     const hunting = S.hunts.some(h => h.phase === 'hunting');
     for (const d of deer) {
+      const zone = zones.find(z => z.id === d.z); if (!zone) continue;
       if (d.wait > 0) { d.wait -= dt; if (d.wait <= 0) { d.tx = (zone.x + 0.5 + Math.random() * (zone.w - 1)) * T; d.ty = (zone.y + 0.8 + Math.random() * (zone.h - 1.3)) * T; } continue; }
       const dx = d.tx - d.x, dy = d.ty - d.y, dd = Math.hypot(dx, dy);
       const sp = (hunting ? 40 : 12) * dt;
@@ -234,6 +239,7 @@ const RENDER = (() => {
     if (window.DEF) DEF.pushDraw(list, lx, L, Tp, time, shadow);
     if (window.VIL) VIL.pushDraw(list, lx, L, Tp, time, shadow);
     if (window.SAGA) SAGA.pushDraw(list, lx, L, Tp, time, shadow);
+    if (window.LAND) LAND.pushDraw(list, lx, L, Tp);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 
@@ -241,6 +247,7 @@ const RENDER = (() => {
     for (const v of S.villagers) if (ui.selected.has(v.id) && !v.inside) drawVillagerAt(v, true);
 
     // ô lưới gợi ý khi đang chọn vị trí xây (để các dãy lều thẳng hàng)
+    if (ui.buildMode && window.LAND) { const mo0 = ui.moveId ? WORLD.byId(ui.moveId) : null; LAND.drawBounds(lx, ox, oy, vw, vh, mo0 && mo0.type === 'plot'); }
     if (ui.buildMode && !ui.popup && !ui.freePlace) {
       lx.strokeStyle = 'rgba(255,255,255,0.55)'; lx.lineWidth = 1; lx.setLineDash([3, 2]);
       const mo = ui.moveId ? WORLD.byId(ui.moveId) : null;
@@ -253,7 +260,8 @@ const RENDER = (() => {
       const { x, y, ok } = ui.ghost;
       const gw = ui.ghost.w || 2, gh = ui.ghost.h || 2;
       const spr = EXP.spriteFor(ui.ghost.kind || 'hut');
-      if (ui.ghost.kind === 'plot') { lx.fillStyle = 'rgba(120,80,40,0.6)'; lx.fillRect(x * T - ox, y * T - oy, gw * T, gh * T); lx.fillStyle = 'rgba(80,50,25,0.7)'; for (let r = 4; r < gh * T; r += 6) lx.fillRect(x * T - ox + 2, y * T - oy + r, gw * T - 4, 2); }
+      if (ui.ghost.kind === 'bridge' && window.LAND) { lx.globalAlpha = 0.8; LAND.drawGhost(lx, x * T - ox, y * T - oy, gw, gh); lx.globalAlpha = 1; }
+      else if (ui.ghost.kind === 'plot') { lx.fillStyle = 'rgba(120,80,40,0.6)'; lx.fillRect(x * T - ox, y * T - oy, gw * T, gh * T); lx.fillStyle = 'rgba(80,50,25,0.7)'; for (let r = 4; r < gh * T; r += 6) lx.fillRect(x * T - ox + 2, y * T - oy + r, gw * T - 4, 2); }
       else { lx.globalAlpha = 0.55; lx.drawImage(spr, x * T - ox, y * T + gh * T - spr.height + 2 - oy); lx.globalAlpha = 1; }
       lx.fillStyle = ok ? 'rgba(80,220,80,0.35)' : 'rgba(230,50,50,0.4)';
       lx.fillRect(x * T - ox, y * T - oy, gw * T, gh * T);

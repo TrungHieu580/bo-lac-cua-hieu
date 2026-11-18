@@ -19,12 +19,15 @@ const WORLD = (() => {
   function ter(x, y) { return inb(x, y) ? TER[S.terrain[idx(x, y)]] : null; }
   function setTer(x, y, n) { if (inb(x, y)) S.terrain[idx(x, y)] = TI[n]; }
   function passTer(n) { return n !== null && n !== 'water' && n !== 'cliff'; }
-  function walkable(x, y) { return inb(x, y) && passTer(ter(x, y)) && !block[idx(x, y)]; }
+  let bridge = null; // ô có cầu đã xây xong: đi được dù là nước
+  function walkable(x, y) { return inb(x, y) && (passTer(ter(x, y)) || (bridge && bridge[idx(x, y)] === 1)) && !block[idx(x, y)]; }
 
   function rebuild() {
     if (S.mapW && (S.mapW !== W || S.mapH !== H)) { W = S.mapW; H = S.mapH; }
     block = new Uint8Array(W * H);
+    bridge = new Uint8Array(W * H);
     region = null;
+    for (const o of S.objects) if (o.type === 'bridge' && o.done) for (let j = 0; j < o.h; j++) for (let i = 0; i < o.w; i++) if (inb(o.x + i, o.y + j)) bridge[idx(o.x + i, o.y + j)] = 1;
     for (const o of S.objects) {
       if (!BLOCKING[o.type]) continue;
       for (let j = 0; j < o.h; j++) for (let i = 0; i < o.w; i++) if (inb(o.x + i, o.y + j)) block[idx(o.x + i, o.y + j)] = 1;

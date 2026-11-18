@@ -61,6 +61,7 @@ const EXP = (() => {
     if (window.QST) QST.migrate(s);
     if (window.VIL) VIL.migrate(s);
     if (window.SAGA) SAGA.migrate(s);
+    if (window.LAND) LAND.migrate(s);
   }
 
   // ---------------- SPRITE MỚI ----------------
@@ -405,7 +406,7 @@ const EXP = (() => {
       if (!['grass', 'meadow', 'forest'].includes(t)) return { ok: false, msg: 'Chỉ mở ruộng trên bãi cỏ hoặc nền rừng trống' };
       if (WORLD.objAt(x + i, y + j)) return { ok: false, msg: 'Ô này đã có vật cản' };
     }
-    if (Math.hypot(x + 1 - f.x - 0.5, y + 1 - f.y - 0.5) > CFG.NEW_PLOT_RADIUS) return { ok: false, msg: 'Ruộng phải ở gần trại' };
+    if (Math.hypot(x + 1 - f.x - 0.5, y + 1 - f.y - 0.5) > Math.max(CFG.NEW_PLOT_RADIUS, buildRadius())) return { ok: false, msg: 'Ruộng phải ở gần trại' };
     if (![[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([a, c]) => WORLD.inMain(a, c))) return { ok: false, msg: 'Không có đường tới đây' };
     return { ok: true };
   }
@@ -431,7 +432,7 @@ const EXP = (() => {
     const cx = plots.length ? plots.reduce((s, p) => s + p.x + 1, 0) / plots.length : f.x + 4;
     const cy = plots.length ? plots.reduce((s, p) => s + p.y + 1, 0) / plots.length : f.y + 5;
     let best = null, bd = 1e9;
-    const R = CFG.NEW_PLOT_RADIUS;
+    const R = Math.max(CFG.NEW_PLOT_RADIUS, buildRadius());
     { // ưu tiên ô trên lưới ruộng, mở rộng thành khối chữ nhật
       const [ax, ay] = plotAnchor(), rows = new Set(plots.map(p => p.y)), cols = new Set(plots.map(p => p.x));
       const n = Math.ceil(R / 3) + 2;
@@ -565,7 +566,7 @@ const EXP = (() => {
         } else {
           const spot = findSpot(want);
           if (spot) { startSite(want, spot[0], spot[1]); want = null; }
-          else S.planNote = `Không còn chỗ trống gần trại để xây ${name}.`;
+          else { S.planNote = `Không còn chỗ trống gần trại để xây ${name} — làng sẽ khai hoang rừng.`; S.needSpace = S.day; }
         }
       } else {
         S.planNote = `Đang tích vật liệu để ${want === 'upgrade' || want === 'fire' ? '' : 'xây '}${name}: gỗ ${S.res.wood}/${c.wood}, đá ${S.res.stone}/${c.stone}.`;
@@ -576,7 +577,7 @@ const EXP = (() => {
     const target = Math.ceil(adults().length / 2) + 1;
     if (plots.length < target && !plots.some(p => p.state === 'wild')) {
       const sp = findPlotSpot();
-      if (sp) createPlot(sp[0], sp[1]);
+      if (sp) createPlot(sp[0], sp[1]); else S.needSpace = S.day;
     }
   }
 
@@ -655,6 +656,7 @@ const EXP = (() => {
     if (window.TRB) TRB.autoRoles();
     if (window.VIL) VIL.autoJobs();
     if (window.SAGA) SAGA.autoJobs();
+    if (window.LAND) LAND.autoJobs();
     const idle = S.villagers.filter(v => !v.child && !v.job && !v.resting && !(window.TRB && TRB.reserved(v)));
     if (!idle.length) return;
     const ctx = context();
@@ -883,6 +885,7 @@ const EXP = (() => {
   }
   function objActions(o) {
     if (window.SAGA) { const r = SAGA.objActions(o); if (r) return r; }
+    if (window.LAND) { const r = LAND.objActions(o); if (r) return r; }
     if (window.TRB) { const r = TRB.objActions(o); if (r) return r; }
     if (window.VIL) { const r = VIL.objActions(o); if (r) return r; }
     if (o.type === 'fishspot') {

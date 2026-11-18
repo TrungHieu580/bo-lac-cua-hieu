@@ -54,6 +54,7 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 | `render.js` | Camera, vẽ theo bội số nguyên, sắp lớp theo tọa độ chân, ánh sáng ngày đêm, mưa |
 | `ui.js` | Thanh trên và thanh dưới, bảng dân làng, xây dựng, nhật ký, bảng hành động, modal |
 | `main.js` | Vòng lặp game, điều khiển chuột, cảm ứng, bàn phím, tự lưu |
+| `land.js` | Bản đồ mở rộng theo cấp bộ lạc, khai hoang rừng, bắc cầu, ranh giới đất làng |
 | `saga.js` | Giữ lửa, bốn mùa, voi ma mút, thám hiểm, chó & ngựa, phát minh & thời đại, bộ lạc lân cận, tranh hang |
 
 ## Đã kiểm tra
@@ -92,6 +93,13 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Gia đình:** mỗi người có giới tính. Nam và nữ gắn kết từ 60 sẽ nên duyên vợ chồng. Mỗi cặp vợ chồng được xếp một lều riêng (con nhỏ ngủ cùng cha mẹ); chỉ khi cả hai cùng vào lều riêng ban đêm (trên lều hiện trái tim) thì sáng hôm sau người vợ mới có thể mang thai (3 ngày, làm việc chậm hơn, không đi săn) rồi sinh con. Làng tự xây thêm lều khi số cặp vợ chồng nhiều hơn số lều. Bảng Dân làng ghi bạn đời, đang mang thai, con của ai.
 - **Mở khóa theo dân số:** 7 người — Giàn phơi thịt; 8 — Câu cá (bến cá dọc bờ sông, mỗi đêm cá hồi lại); 9 — Kho lương; 10 — Nhà dài và Lễ hội lửa trại mỗi 7 ngày (tốn thức ăn, tăng mạnh tinh thần và gắn kết); 12 — Lều thảo dược (mọi người hồi thêm sức khỏe mỗi đêm); 14 — Xưởng chế tác (xây dựng, đốn gỗ, nhặt đá nhanh hơn 20%). Dân số tối đa 40.
 - Bản lưu cũ vẫn chơi tiếp được trên bản đồ cũ 36×28 với đầy đủ tính năng mới; chọn **Chơi mới** để có bản đồ lớn.
+
+## Đất đai mở rộng (land.js)
+
+- **Bản đồ lớn dần theo cấp bộ lạc:** 48×36 → 56×42 → 64×48 → 72×54 → 80×60 ô. Mỗi lần lửa trại lên cấp, đất nới ra mọi phía: sông và vách đá kéo dài tự nhiên, thêm rừng, đồng cỏ, đồi đá có tảng đá, bụi quả và một bãi săn mới. Bản lưu cũ tự nới theo cấp hiện tại khi nạp.
+- **Ranh giới đất làng:** khi chọn chỗ xây hoặc di chuyển, vòng gạch vàng cho thấy vùng được phép xây (bán kính tăng theo dân số và cấp bộ lạc); có thông báo mỗi khi đất làng nới rộng.
+- **Khai hoang rừng:** chạm cây → **Khai hoang** đánh dấu vùng 5×5 ô; dân làng đốn cây, đào gốc (được gỗ), đất thành bãi cỏ trống vĩnh viễn. Khi làng hết chỗ xây hoặc mở ruộng, làng tự khai hoang khu rừng gần nhất.
+- **Bắc cầu qua sông:** chạm vào sông → **Bắc cầu** (tối đa 7 ô, mỗi ô 4 gỗ + 1 đá, 1,5 giờ công). Xây xong người và thú đi qua được.
 
 ## Di chuyển ruộng & tự sắp xếp làng
 

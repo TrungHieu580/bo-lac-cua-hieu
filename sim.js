@@ -155,6 +155,7 @@ const SIM = (() => {
     if (window.TRB && TRB.handles(spec.type)) return TRB.check(spec, vs);
     if (window.VIL && VIL.handles(spec.type)) return VIL.check(spec, vs);
     if (window.SAGA && SAGA.handles(spec.type)) return SAGA.check(spec, vs);
+    if (window.LAND && LAND.handles(spec.type)) return LAND.check(spec, vs);
     if (window.LAY && LAY.handles(spec.type)) return LAY.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
@@ -231,6 +232,7 @@ const SIM = (() => {
     if (window.TRB && TRB.handles(spec.type)) return TRB.assign(spec, vs);
     if (window.VIL && VIL.handles(spec.type)) return VIL.assign(spec, vs);
     if (window.SAGA && SAGA.handles(spec.type)) return SAGA.assign(spec, vs);
+    if (window.LAND && LAND.handles(spec.type)) return LAND.assign(spec, vs);
     if (window.LAY && LAY.handles(spec.type)) return LAY.assign(spec, vs);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
@@ -604,6 +606,7 @@ const SIM = (() => {
     if (window.TRB && TRB.planJob(v, j)) return;
     if (window.VIL && VIL.planJob(v, j)) return;
     if (window.SAGA && SAGA.planJob(v, j)) return;
+    if (window.LAND && LAND.planJob(v, j)) return;
     v.job = null;
   }
 
@@ -771,7 +774,7 @@ const SIM = (() => {
         t.time -= dt;
         if (t.time <= 0 || v.job) v.task = null;
         break;
-      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt)) && !(window.VIL && VIL.task(v, t, dt)) && !(window.SAGA && SAGA.task(v, t, dt))) v.task = null;
+      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt)) && !(window.VIL && VIL.task(v, t, dt)) && !(window.SAGA && SAGA.task(v, t, dt)) && !(window.LAND && LAND.task(v, t, dt))) v.task = null;
     }
   }
 
@@ -900,6 +903,7 @@ const SIM = (() => {
     if (window.TRB) TRB.overnight();
     if (window.VIL) VIL.overnight();
     if (window.SAGA) SAGA.overnight();
+    if (window.LAND) LAND.overnight();
     if (window.QST) QST.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
@@ -920,6 +924,7 @@ const SIM = (() => {
     if (window.EXP) EXP.tick(dt);
     if (window.DEF) DEF.tick(dt);
     if (window.SAGA) SAGA.tick(dt);
+    if (window.LAND) LAND.tick(dt);
     if (window.QST) QST.tick(dt);
     if (S.hour >= CFG.DAY_END && (S.hour >= CFG.NIGHT_MAX || S.villagers.every(asleep))) endDay();
   }
@@ -965,7 +970,7 @@ const SIM = (() => {
     if (t0 && t0.kind === 'sleep') { const h = WORLD.byId(v.inside); return h && h.type === 'longhouse' ? 'Đang ngủ trong nhà dài' : 'Đang ngủ trong lều'; }
     if (t0 && t0.kind === 'sleepout') return 'Ngủ ngoài trời bên lửa (thiếu chỗ ngủ)';
     if (bedtime() && v.bed && !v.carry) return 'Đang về lều ngủ';
-    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v)) || (window.VIL && VIL.jobText(v)) || (window.SAGA && SAGA.jobText(v));
+    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v)) || (window.VIL && VIL.jobText(v)) || (window.SAGA && SAGA.jobText(v)) || (window.LAND && LAND.jobText(v));
     if (dj) return dj;
     if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';

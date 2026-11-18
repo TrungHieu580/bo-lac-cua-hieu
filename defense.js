@@ -75,7 +75,10 @@ const DEF = (() => {
   }
   function spawnTile() {
     const f = WORLD.fire();
-    const cands = edgeTiles().filter(([x, y]) => Math.hypot(x - f.x, y - f.y) > 14);
+    let cands = edgeTiles().filter(([x, y]) => { const d = Math.hypot(x - f.x, y - f.y); return d > 14 && d < 27; });
+    if (!cands.length) { // bản đồ đã mở rộng: thú xuất hiện từ bìa rừng quanh làng
+      for (let k = 0; k < 400 && cands.length < 30; k++) { const a = rand() * Math.PI * 2, r = 19 + rand() * 6, x = Math.round(f.x + Math.cos(a) * r), y = Math.round(f.y + Math.sin(a) * r); if (WORLD.walkable(x, y) && WORLD.inMain(x, y)) cands.push([x, y]); }
+    }
     return cands.length ? pick(cands) : null;
   }
   function spawn(kind, count, tile, warned) {
