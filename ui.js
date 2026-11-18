@@ -385,7 +385,7 @@ const UI = (() => {
     if (state.buildMode) {
       const mo = state.moveId ? WORLD.byId(state.moveId) : null;
       const b = mo || CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
-      const sn = state.freePlace || additive ? null : EXP.snapBuild(state.buildKind || 'hut', wx, wy);
+      const sn = state.freePlace || additive ? null : (mo && window.LAY ? LAY.snapFor(mo, wx, wy) : EXP.snapBuild(state.buildKind || 'hut', wx, wy));
       const x = sn ? sn[0] : Math.round(wx / T - b.w / 2), y = sn ? sn[1] : Math.round(wy / T - b.h / 2);
       const v = mo ? LAY.validMove(mo.id, x, y) : SIM.validHutSpot(x, y, b.w, b.h);
       if (!v.ok) { state.ghost = { x, y, ok: false, kind: state.buildKind, w: b.w, h: b.h }; toast(v.msg, 'err'); return; }
@@ -418,7 +418,7 @@ const UI = (() => {
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
     const mo = state.moveId ? WORLD.byId(state.moveId) : null;
     const b = mo || CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
-    const sn = state.freePlace ? null : EXP.snapBuild(state.buildKind || 'hut', wx, wy);
+    const sn = state.freePlace ? null : (mo && window.LAY ? LAY.snapFor(mo, wx, wy) : EXP.snapBuild(state.buildKind || 'hut', wx, wy));
     const x = sn ? sn[0] : Math.round(wx / T - b.w / 2), y = sn ? sn[1] : Math.round(wy / T - b.h / 2);
     state.ghost = { x, y, ok: mo ? LAY.validMove(mo.id, x, y).ok : SIM.validHutSpot(x, y, b.w, b.h).ok, kind: state.buildKind, w: b.w, h: b.h };
   }
@@ -499,7 +499,8 @@ const UI = (() => {
         <li><b>Nhà chữa bệnh:</b> người có sức khỏe dưới 45 tự vào nằm chữa (dấu cộng xanh trên mái), hồi nhanh, vu sư tới chăm thì càng nhanh.</li>
         <li><b>Nhà bếp</b> (7 dân): một người nấu ăn mỗi chiều, bữa tối tiết kiệm thức ăn và bổ dưỡng hơn. <b>Chuồng thú</b> (9 dân): nuôi dê — có người chăn thả mỗi sáng thì dê cho sữa, sinh con; coi chừng sói vồ dê!</li>
         <li><b>Công trình đồ sộ:</b> Đền tổ tiên (bộ lạc cấp 3), Vòng đá thiêng (cấp 4), Đại sảnh tù trưởng (cấp 5) — tốn nhiều gỗ đá, cả làng góp sức nhiều ngày, đổi lại lợi ích lớn.</li>
-        <li><b>Di chuyển công trình:</b> chạm vào lều, kho, chuồng, đền... → <b>Di chuyển</b>, rồi chạm chỗ mới và bấm <b>Chuyển</b> (miễn phí, chuyển ngay). Nút <b>Lưới: Bật/Tắt</b> để hít vào lưới cho thẳng hàng hoặc đặt tự do (máy tính: giữ Shift khi chạm).</li>
+        <li><b>Tự sắp xếp làng:</b> mở <b>Xây dựng</b> → <b>Sắp xếp</b> để gom công trình cùng loại vào từng khu (kho & chế biến, nhà ở, chữa bệnh, tâm linh, chăn nuôi, chòi canh) và xếp ruộng liền nhau thành một cánh đồng. Không ưng thì bấm <b>Hoàn tác</b>.</li>
+        <li><b>Di chuyển công trình & ruộng:</b> chạm vào lều, kho, chuồng, đền, ruộng... → <b>Di chuyển</b>, rồi chạm chỗ mới và bấm <b>Chuyển</b> (miễn phí, chuyển ngay). Nút <b>Lưới: Bật/Tắt</b> để hít vào lưới cho thẳng hàng hoặc đặt tự do (máy tính: giữ Shift khi chạm).</li>
         <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>
         <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
         <li><b>Giữ lửa:</b> lửa trại cần củi (chỉ số 🔥 trên thanh trên). Mưa bão, mùa đông làm lửa cháy nhanh; hết củi lửa sẽ tắt — thú dữ hết sợ, không nấu được ăn. Làng tự cử người thêm củi; nếu tắt, chạm lửa trại → <b>Nhóm lại lửa</b> hoặc <b>Xin lửa</b> bộ lạc lân cận.</li>

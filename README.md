@@ -93,6 +93,11 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Mở khóa theo dân số:** 7 người — Giàn phơi thịt; 8 — Câu cá (bến cá dọc bờ sông, mỗi đêm cá hồi lại); 9 — Kho lương; 10 — Nhà dài và Lễ hội lửa trại mỗi 7 ngày (tốn thức ăn, tăng mạnh tinh thần và gắn kết); 12 — Lều thảo dược (mọi người hồi thêm sức khỏe mỗi đêm); 14 — Xưởng chế tác (xây dựng, đốn gỗ, nhặt đá nhanh hơn 20%). Dân số tối đa 40.
 - Bản lưu cũ vẫn chơi tiếp được trên bản đồ cũ 36×28 với đầy đủ tính năng mới; chọn **Chơi mới** để có bản đồ lớn.
 
+## Di chuyển ruộng & tự sắp xếp làng
+
+- **Ruộng di chuyển được** như công trình: chạm ruộng → **Di chuyển**, giữ nguyên trạng thái (đất đã dọn, lúa đang lớn, lúa chờ mang về). Ruộng tự hít vào lưới thẳng hàng với các ruộng khác.
+- **Tự sắp xếp làng** (bảng Xây dựng → **Sắp xếp**): gom công trình cùng loại vào từng khu — kho & chế biến (kho, giàn phơi, kho lương, bếp, xưởng) sát bếp lửa, nhà ở (lều, nhà dài), khu tâm linh (đền, vòng đá, đại sảnh, vách tranh), chữa bệnh, chăn nuôi, chòi canh rải ở rìa làng; ruộng xếp liền nhau thành một cánh đồng. Miễn phí, chuyển ngay, có nút **Hoàn tác**. Sau đó làng tự xây công trình mới cạnh khu cùng loại.
+
 ## Cảm hứng từ phim & truyện (Quest for Fire, Alpha, Earth's Children, The Croods, Origins)
 
 Tất cả nằm trong `saga.js`, thông số trong `config.js` (FIRE, SEASONS, MAMMOTH, EXPEDITION, PETS, INVENT, NEIGHBOR).

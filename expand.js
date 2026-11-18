@@ -373,7 +373,8 @@ const EXP = (() => {
   function findSpot(k) {
     const b = B[k], f = WORLD.fire();
     let sbest = null, sd = 1e9;
-    for (const [x, y] of freeSlots(k)) { const d = Math.hypot(x + b.w / 2 - f.x - 0.5, (y + b.h / 2 - f.y - 0.5) * 1.15); if (d < sd) { sd = d; sbest = [x, y]; } }
+    const gc = window.LAY ? LAY.groupCentroid(k) : null; // gần khu cùng loại (sau khi tự sắp xếp)
+    for (const [x, y] of freeSlots(k)) { const df = Math.hypot(x + b.w / 2 - f.x - 0.5, (y + b.h / 2 - f.y - 0.5) * 1.15); const d = gc ? Math.hypot(x + b.w / 2 - gc[0], y + b.h / 2 - gc[1]) + 0.2 * df : df; if (d < sd) { sd = d; sbest = [x, y]; } }
     if (sbest) return sbest;
     const R = buildRadius();
     let best = null, bd = 1e9;
@@ -932,6 +933,7 @@ const EXP = (() => {
       ${rows}
       <div class="act"><div class="act-main"><b>Nâng cấp kho (cấp ${st.level + 1}/${maxL + 1})</b><small>${st.level >= maxL ? 'Đã đạt cấp tối đa.' : `Chi phí: ${u.wood} gỗ, ${u.stone} đá · ${u.hours} giờ công · sức chứa ${CFG.STORAGE_CAP[st.level]} → ${CFG.STORAGE_CAP[st.level + 1]} mỗi loại.`} Thức ăn hiện chứa tối đa ${SIM.cap('food')}. Làng tự nâng cấp khi kho gần đầy.</small>${upMsg ? `<div class="act-msg ${st.upgrading ? '' : 'err'}">${upMsg}</div>` : ''}</div>
         <button class="btn go" data-act="upgrade" ${st.level >= maxL ? 'disabled' : ''}>Chọn kho</button></div>
+      ${window.LAY ? LAY.panelRow() : ''}
       <div class="act"><div class="act-main"><b>${ic('field')} Mở ruộng mới</b><small>Không tốn vật liệu. Chạm vào bãi cỏ trống gần trại để chọn chỗ, hoặc để làng tự chọn. Hiện có ${count('plot')} ruộng.</small></div>
         <button class="btn go" data-act="ex-plot">Tự chọn chỗ</button></div>`;
   }
@@ -995,6 +997,7 @@ const EXP = (() => {
   function onPanelAct(a) {
     if (a === 'ex-auto') { S.auto = !S.auto; UI.toast(S.auto ? 'Dân làng sẽ tự làm việc' : 'Đã tắt tự động — hãy tự giao việc', 'ok'); }
     else if (a === 'ex-skip') S.autoSkipNight = !S.autoSkipNight;
+    else if (a === 'ex-arrange' || a === 'ex-unarrange') { const r = a === 'ex-arrange' ? LAY.arrange() : LAY.undo(); UI.toast(r.msg, r.ok ? 'ok' : 'err'); }
     else if (a.startsWith('ex-prio-')) { S.priority = a.slice(8); UI.toast(`Ưu tiên: ${PRIOS.find(p => p[0] === S.priority)[1]}`, 'ok'); }
     else if (a === 'ex-plot') {
       const sp = findPlotSpot();

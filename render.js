@@ -243,8 +243,9 @@ const RENDER = (() => {
     // ô lưới gợi ý khi đang chọn vị trí xây (để các dãy lều thẳng hàng)
     if (ui.buildMode && !ui.popup && !ui.freePlace) {
       lx.strokeStyle = 'rgba(255,255,255,0.55)'; lx.lineWidth = 1; lx.setLineDash([3, 2]);
-      const b = CFG.BUILDINGS[ui.buildKind] || CFG.BUILDINGS.hut;
-      for (const [sx, sy] of EXP.freeSlots(ui.buildKind || 'hut')) lx.strokeRect(sx * T - ox + 1.5, sy * T - oy + 1.5, b.w * T - 3, b.h * T - 3);
+      const mo = ui.moveId ? WORLD.byId(ui.moveId) : null;
+      const b = mo || CFG.BUILDINGS[ui.buildKind] || CFG.BUILDINGS.hut;
+      for (const [sx, sy] of (mo && window.LAY ? LAY.guides(mo.id) : EXP.freeSlots(ui.buildKind || 'hut'))) lx.strokeRect(sx * T - ox + 1.5, sy * T - oy + 1.5, b.w * T - 3, b.h * T - 3);
       lx.setLineDash([]);
     }
     // bóng ma khi đặt lều
@@ -252,7 +253,8 @@ const RENDER = (() => {
       const { x, y, ok } = ui.ghost;
       const gw = ui.ghost.w || 2, gh = ui.ghost.h || 2;
       const spr = EXP.spriteFor(ui.ghost.kind || 'hut');
-      lx.globalAlpha = 0.55; lx.drawImage(spr, x * T - ox, y * T + gh * T - spr.height + 2 - oy); lx.globalAlpha = 1;
+      if (ui.ghost.kind === 'plot') { lx.fillStyle = 'rgba(120,80,40,0.6)'; lx.fillRect(x * T - ox, y * T - oy, gw * T, gh * T); lx.fillStyle = 'rgba(80,50,25,0.7)'; for (let r = 4; r < gh * T; r += 6) lx.fillRect(x * T - ox + 2, y * T - oy + r, gw * T - 4, 2); }
+      else { lx.globalAlpha = 0.55; lx.drawImage(spr, x * T - ox, y * T + gh * T - spr.height + 2 - oy); lx.globalAlpha = 1; }
       lx.fillStyle = ok ? 'rgba(80,220,80,0.35)' : 'rgba(230,50,50,0.4)';
       lx.fillRect(x * T - ox, y * T - oy, gw * T, gh * T);
     }
