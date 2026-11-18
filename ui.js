@@ -27,7 +27,7 @@ const UI = (() => {
   // ---------------- THANH TRÊN ----------------
   function buildTop() {
     $('#top').innerHTML = `
-      <div class="tb-time"><b id="t-day">Ngày 1</b><span id="t-clock">06:00</span><span id="t-weather"></span><span class="fc" title="Dự báo ngày mai">Mai <span id="t-fc"></span></span></div>
+      <div class="tb-time"><b id="t-day">Ngày 1</b><span id="t-clock">06:00</span><span id="t-weather"></span><span class="fc" title="Dự báo ngày mai">Mai <span id="t-fc"></span></span>${window.TRB ? TRB.topHTML() : ''}</div>
       <div class="tb-res">
         <span class="res" title="Dân số">${ic('people')}<b id="r-pop">6</b></span>
         <span class="res" title="Thức ăn (số ngày còn đủ)">${ic('food')}<b id="r-food">0</b><small id="r-days"></small></span>
@@ -52,6 +52,7 @@ const UI = (() => {
     $('#r-wood').textContent = S.res.wood;
     $('#r-stone').textContent = S.res.stone;
     $('#r-seeds').textContent = S.res.seeds;
+    if (window.TRB) TRB.updateTop();
     const rs = $('#r-spear'); if (rs) { rs.textContent = S.res.spears || 0; rs.parentNode.classList.toggle('alarm', !!(S.beasts && S.beasts.some(b => b.state !== 'flee'))); }
     const pb = $('#b-pause');
     pb.innerHTML = state.paused ? `<span class="bi">▶</span><span>Tiếp tục</span>` : `<span class="bi">❚❚</span><span>Tạm dừng</span>`;
@@ -83,7 +84,7 @@ const UI = (() => {
     if (vs.length === 1) {
       const v = vs[0];
       const p = SIM.taskProgress(v);
-      html = `<img class="pt" src="${pv(v)}"><div class="sb-main"><div><b class="name-link" data-id="${v.id}">${v.name}</b> <small>${CFG.SKILL_NAMES[v.main]}</small></div>
+      html = `<img class="pt" src="${pv(v)}"><div class="sb-main"><div><b class="name-link" data-id="${v.id}">${v.name}</b> <small>${window.TRB ? TRB.title(v) : CFG.SKILL_NAMES[v.main]}</small></div>
         <div class="sb-job">${esc(SIM.jobText(v))}${p !== null ? ` · ${Math.round(p * 100)}%` : ''}</div>
         <div class="sb-bars">${ic('bolt')}${mini(v.energy, '#f2c94c')}${ic('heart')}${mini(v.health, '#e0505a')}${ic('smile')}${mini(v.morale, '#7cc0f0')}</div></div>`;
     } else {
@@ -139,7 +140,7 @@ const UI = (() => {
         <label class="vchk"><input type="checkbox" data-id="${v.id}"><span></span></label>
         <img class="pt" src="${pv(v)}">
         <div class="vinfo">
-          <div class="vname"><b class="name-link" data-id="${v.id}" title="Di chuyển camera tới ${v.name}">${v.name}</b> <span class="skill">${CFG.SKILL_NAMES[v.main]}</span> <span class="bond"></span></div>
+          <div class="vname"><b class="name-link" data-id="${v.id}" title="Di chuyển camera tới ${v.name}">${v.name}</b> <span class="skill">${window.TRB ? TRB.title(v) : CFG.SKILL_NAMES[v.main]}</span> <span class="bond"></span></div>
           <div class="vjob"></div>
           <div class="vreason"></div>
           <div class="vbars"><span title="Năng lượng">${ic('bolt')}<span class="mbar e"><i></i></span><em class="ev"></em></span><span title="Sức khỏe">${ic('heart')}<span class="mbar h"><i></i></span><em class="hv"></em></span><span title="Tinh thần">${ic('smile')}<span class="mbar m"><i></i></span><em class="mv"></em></span></div>
@@ -302,6 +303,7 @@ const UI = (() => {
         out.desc = `Mỗi tối ${fmtH(CFG.MEAL)} cả bộ lạc ăn ở đây (${S.villagers.length} khẩu phần/tối).`;
         out.actions.push({ spec: { type: 'rest' }, label: 'Nghỉ bên lửa', detail: `Hồi ${CFG.ENERGY.restRegen} năng lượng/giờ, nghỉ tới khi gần đầy.` });
         if (window.DEF) DEF.fireActions(out, n);
+        if (window.TRB) TRB.fireActions(out, n);
         break;
       }
       case 'huntzone': {
@@ -332,7 +334,7 @@ const UI = (() => {
     const p = state.popup; if (!p) return;
     const info = actionsFor(p);
     const vs = selectedVs();
-    const chips = S.villagers.map(v => `<button class="chip ${state.selected.has(v.id) ? 'on' : ''}" data-id="${v.id}"><img src="${pv(v)}"><span>${v.name}</span><small>${CFG.SKILL_NAMES[v.main]}</small></button>`).join('');
+    const chips = S.villagers.map(v => `<button class="chip ${state.selected.has(v.id) ? 'on' : ''}" data-id="${v.id}"><img src="${pv(v)}"><span>${v.name}</span><small>${window.TRB ? TRB.title(v) : CFG.SKILL_NAMES[v.main]}</small></button>`).join('');
     const acts = info.actions.map((a, i) => {
       const c = SIM.check(a.spec, vs);
       let extra = '';
@@ -373,7 +375,8 @@ const UI = (() => {
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
     if (state.buildMode) {
       const b = CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
-      const x = Math.round(wx / T - b.w / 2), y = Math.round(wy / T - b.h / 2);
+      const sn = EXP.snapBuild(state.buildKind || 'hut', wx, wy);
+      const x = sn ? sn[0] : Math.round(wx / T - b.w / 2), y = sn ? sn[1] : Math.round(wy / T - b.h / 2);
       const v = SIM.validHutSpot(x, y, b.w, b.h);
       if (!v.ok) { state.ghost = { x, y, ok: false, kind: state.buildKind, w: b.w, h: b.h }; toast(v.msg, 'err'); return; }
       openPopup({ kind: 'place', b: state.buildKind || 'hut', x, y });
@@ -393,7 +396,7 @@ const UI = (() => {
     if (state.popup) { closePopup(); return; }
     const tx = Math.floor(wx / T), ty = Math.floor(wy / T);
     if (!WORLD.inb(tx, ty)) return;
-    const hut = hutSpotAt(wx, wy);
+    const hut = EXP.snapBuild('hut', wx, wy) || hutSpotAt(wx, wy);
     const hutOk = SIM.validHutSpot(hut[0], hut[1]).ok;
     if (state.selected.size || hutOk || EXP.plotSpotAt(wx, wy)) {
       if (!WORLD.walkable(tx, ty) && !hutOk) { toast('Không thể đi tới đây', 'err'); return; }
@@ -404,7 +407,8 @@ const UI = (() => {
     if (!state.buildMode || state.popup) return;
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
     const b = CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
-    const x = Math.round(wx / T - b.w / 2), y = Math.round(wy / T - b.h / 2);
+    const sn = EXP.snapBuild(state.buildKind || 'hut', wx, wy);
+    const x = sn ? sn[0] : Math.round(wx / T - b.w / 2), y = sn ? sn[1] : Math.round(wy / T - b.h / 2);
     state.ghost = { x, y, ok: SIM.validHutSpot(x, y, b.w, b.h).ok, kind: state.buildKind, w: b.w, h: b.h };
   }
 
@@ -466,6 +470,8 @@ const UI = (() => {
         <li><b>Chọn mục tiêu:</b> bụi quả → <b>Hái quả</b>; cây → <b>Đốn gỗ</b>; tảng đá → <b>Nhặt đá</b>; đồng cỏ có hươu → <b>Cử nhóm săn</b>; ruộng đất hoang → <b>Dọn đất</b> → <b>Gieo hạt</b> → <b>Thu hoạch</b>; ô trống gần trại → <b>Xây lều</b>.</li>
         <li>Nhân vật tự tìm đường, làm việc và mang đồ về kho. Tài nguyên chỉ được cộng khi mang về tới kho.</li>
         <li>18:00 mọi người về bếp lửa, 19:00 mỗi người ăn 1 khẩu phần, 20:30 ai về lều nấy ngủ (Zzz trên lều). Vợ chồng ngủ chung một lều riêng (trái tim trên lều) mới có thể có con.</li>
+        <li><b>Bộ lạc:</b> chạm vào lửa trại để nâng cấp — cấp lửa trại là cấp bộ lạc (5 cấp), tăng dân số tối đa, bán kính xây dựng, mở khóa Mỏ đá, Tiên tri (cấp 2), Vu sư (cấp 3). Hiếu là Tù trưởng (đội mũ lông): tù trưởng khỏe thì cả làng làm nhanh hơn.</li>
+        <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>
         <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
         <li><b>Camera:</b> kéo để di chuyển, cuộn chuột / chụm hai ngón để phóng to. Phím: WASD/mũi tên, Space tạm dừng, 1-2-3 tốc độ, B xây dựng, V dân làng, J nhật ký, Esc đóng.</li>
       </ol>

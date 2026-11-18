@@ -152,6 +152,7 @@ const SIM = (() => {
     if (!['rest', 'cancel'].includes(spec.type) && vs.some(v => v.child)) return { ok: false, msg: 'Trẻ con chưa thể làm việc' };
     if (window.EXP && EXP.handles(spec.type)) return EXP.check(spec, vs);
     if (window.DEF && DEF.handles(spec.type)) return DEF.check(spec, vs);
+    if (window.TRB && TRB.handles(spec.type)) return TRB.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
     const needPeople = (n) => vs.length < n ? (n - vs.length === 1 ? `Cần thêm một thành viên` : `Cần thêm ${n - vs.length} thành viên`) : null;
@@ -224,6 +225,7 @@ const SIM = (() => {
     if (!c.ok) return c;
     if (window.EXP && EXP.handles(spec.type)) return EXP.assign(spec, vs, c);
     if (window.DEF && DEF.handles(spec.type)) return DEF.assign(spec, vs);
+    if (window.TRB && TRB.handles(spec.type)) return TRB.assign(spec, vs);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
       c.later = true;
@@ -322,6 +324,7 @@ const SIM = (() => {
     const injury = clamp(H.injuryBase - H.injuryPerSkill * sk + (S.weather === 'rain' ? H.injuryRain : 0) - (n - 2) * 0.03, 0.02, 0.6);
     const est = { chance, min, max, injury, n };
     if (window.DEF) DEF.huntMod(est, vs);
+    if (window.TRB) TRB.huntMod(est, vs);
     const score = est.injury + (1 - est.chance) * 0.5;
     est.risk = score < 0.3 ? 'Thấp' : score < 0.45 ? 'Vừa' : 'Cao';
     return est;
@@ -563,7 +566,7 @@ const SIM = (() => {
       }
       case 'build': case 'upgrade': {
         if (j.type === 'build' && (!o || o.type !== 'site')) return jobDone(v, 'Công trình đã hoàn thành');
-        if (j.type === 'upgrade' && (!o || !o.upgrading)) return jobDone(v, 'Kho đã nâng cấp xong');
+        if (j.type === 'upgrade' && (!o || !o.upgrading)) return jobDone(v, o && o.type === 'fire' ? 'Lửa trại đã nâng cấp xong' : 'Kho đã nâng cấp xong');
         const ring = WORLD.ringTiles(o);
         const work = { kind: 'work', mode: j.type, target: o.id, need: 0, done: 0, skill: 'build' };
         if (isAt(v, ring)) { v.task = work; return; }
@@ -588,6 +591,7 @@ const SIM = (() => {
       }
     }
     if (window.DEF && DEF.planJob(v, j)) return;
+    if (window.TRB && TRB.planJob(v, j)) return;
     v.job = null;
   }
 
@@ -655,6 +659,8 @@ const SIM = (() => {
       event(kind === 'hut' ? 'Một chiếc lều mới đã dựng xong! Thành viên ngủ trong lều sẽ hồi phục tốt hơn.' : `${name} đã xây xong!`);
       EV.emit('toast', `${name} đã hoàn thành!`);
       unstickAll();
+    } else if (mode === 'upgrade' && o.type === 'fire' && window.TRB) {
+      TRB.fireUpgraded(o);
     } else if (mode === 'upgrade') {
       o.level++; o.upgrading = null;
       S.today.built.push('Nâng cấp kho');
@@ -753,7 +759,7 @@ const SIM = (() => {
         t.time -= dt;
         if (t.time <= 0 || v.job) v.task = null;
         break;
-      default: if (!(window.DEF && DEF.task(v, t, dt))) v.task = null;
+      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt))) v.task = null;
     }
   }
 
@@ -875,6 +881,7 @@ const SIM = (() => {
     }
     if (window.EXP) EXP.overnight();
     if (window.DEF) DEF.overnight();
+    if (window.TRB) TRB.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
     EV.emit('newDay');
@@ -937,7 +944,7 @@ const SIM = (() => {
     if (t0 && t0.kind === 'sleep') { const h = WORLD.byId(v.inside); return h && h.type === 'longhouse' ? 'Đang ngủ trong nhà dài' : 'Đang ngủ trong lều'; }
     if (t0 && t0.kind === 'sleepout') return 'Ngủ ngoài trời bên lửa (thiếu chỗ ngủ)';
     if (bedtime() && v.bed && !v.carry) return 'Đang về lều ngủ';
-    const dj = window.DEF && DEF.jobText(v);
+    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v));
     if (dj) return dj;
     if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';
@@ -945,7 +952,7 @@ const SIM = (() => {
     if (phase() === 'evening') return t && t.kind === 'sit' ? 'Quây quần bên lửa' : v.carry ? 'Mang đồ về kho' : 'Về bên bếp lửa';
     if (!v.job) return v.carry ? 'Mang đồ về kho' : 'Rảnh rỗi';
     const o = v.job.target ? WORLD.byId(v.job.target) : null;
-    const where = o ? ({ tree: 'cây', bush: 'bụi quả', boulder: 'tảng đá', plot: 'ruộng', site: 'lều', storage: 'kho', huntzone: 'đồng cỏ', fishspot: 'bến cá' }[o.type] || '') : '';
+    const where = o ? ({ tree: 'cây', bush: 'bụi quả', boulder: 'tảng đá', plot: 'ruộng', site: 'lều', storage: 'kho', huntzone: 'đồng cỏ', fishspot: 'bến cá', quarry: 'mỏ đá' }[o.type] || '') : '';
     let s = {
       gather: o ? G[GKEY[o.type]]?.label || 'Thu gom' : 'Thu gom', clear: 'Dọn đất', sow: 'Gieo hạt', harvest: 'Thu hoạch',
       build: 'Xây dựng', upgrade: 'Nâng cấp kho', hunt: 'Đi săn', move: 'Di chuyển',

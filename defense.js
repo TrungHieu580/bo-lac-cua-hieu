@@ -11,6 +11,7 @@ const DEF = (() => {
   const tc = (tx, ty) => [tx * T + T / 2, ty * T + T * 0.75];
   const tileOfP = (x, y) => [Math.floor(x / T), Math.floor((y - 1) / T)];
   const names = (vs) => vs.map(v => v.name).join(', ');
+  const safeR = () => D.fireSafe + (window.TRB ? TRB.fireSafeBonus() : 0);
   const fireP = () => { const f = WORLD.fire(); return { x: (f.x + 0.5) * T, y: (f.y + 0.6) * T }; };
   const GUARD_START = { 'Hiếu': 2, 'Đá': 4, 'Gió': 3, 'Mây': 1, 'Nụ': 2, 'Sương': 1 };
 
@@ -72,14 +73,19 @@ const DEF = (() => {
     const f = WORLD.fire(), dx = tx - f.x, dy = ty - f.y;
     return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'phía đông' : 'phía tây') : (dy > 0 ? 'phía nam' : 'phía bắc');
   }
-  function spawn(kind, count) {
-    const K = BT[kind], f = WORLD.fire();
+  function spawnTile() {
+    const f = WORLD.fire();
     const cands = edgeTiles().filter(([x, y]) => Math.hypot(x - f.x, y - f.y) > 14);
-    if (!cands.length) return;
-    const [tx, ty] = pick(cands);
+    return cands.length ? pick(cands) : null;
+  }
+  function spawn(kind, count, tile, warned) {
+    const K = BT[kind];
+    const t = tile && WORLD.walkable(tile[0], tile[1]) ? tile : spawnTile();
+    if (!t) return;
+    const [tx, ty] = t;
     for (let i = 0; i < count; i++) {
       const [x, y] = tc(tx, ty);
-      S.beasts.push({ id: S.def.nextId++, kind, x: x + i * 14, y: y + i * 6, hp: K.hp, max: K.hp, life: 0, state: 'come', path: null, pi: 0, repath: 0, atk: 0, steals: 0, face: 1, hit: 0, hold: 0, goal: null });
+      S.beasts.push({ id: S.def.nextId++, kind, x: x + i * 14, y: y + i * 6, hp: K.hp, max: K.hp, life: 0, state: 'come', path: null, pi: 0, repath: 0, atk: 0, steals: 0, face: 1, hit: 0, hold: 0, goal: null, warned: !!warned });
     }
     S.def.attacks++; S.def.active = true;
     const what = count > 1 ? `Một bầy ${count} con ${K.name.toLowerCase()}` : `Một con ${K.name.toLowerCase()}`;
@@ -102,7 +108,7 @@ const DEF = (() => {
     let remain = speed * T * dt;
     while (remain > 0 && b.pi < b.path.length) {
       const [px, py] = b.path[b.pi];
-      if (!bold && b.state !== 'flee' && Math.hypot(px - fp.x, py - fp.y) < D.fireSafe * T) { b.path = null; return; } // sợ lửa
+      if (!bold && b.state !== 'flee' && Math.hypot(px - fp.x, py - fp.y) < safeR() * T) { b.path = null; return; } // sợ lửa
       const dx = px - b.x, dy = py - b.y, d = Math.hypot(dx, dy);
       if (Math.abs(dx) > 0.3) b.face = dx > 0 ? 1 : -1;
       if (d <= remain) { b.x = px; b.y = py; remain -= d; b.pi++; }
@@ -131,7 +137,7 @@ const DEF = (() => {
     let best = null, bd = 22 * T;
     for (const v of S.villagers) {
       if (v.inside || (v.job && v.job.type === 'hunt')) continue;
-      if (!K.bold && Math.hypot(v.x - fp.x, v.y - fp.y) < D.fireSafe * T) continue;
+      if (!K.bold && Math.hypot(v.x - fp.x, v.y - fp.y) < safeR() * T) continue;
       const d = dist(v, b);
       if (d < bd) { bd = d; best = v; }
     }
@@ -253,8 +259,8 @@ const DEF = (() => {
     for (const v of S.villagers) {
       if (v.inside || isDefender(v) || (v.job && v.job.type === 'hunt')) continue;
       if (v._flee && S.hour < v._flee) continue;
-      if (Math.hypot(v.x - fp.x, v.y - fp.y) < D.fireSafe * T) continue;
-      if (bs.some(b => dist(v, b) < fleeR)) { v._flee = S.hour + 1; v.task = null; }
+      if (Math.hypot(v.x - fp.x, v.y - fp.y) < safeR() * T) continue;
+      if (bs.some(b => dist(v, b) < fleeR * (b.warned ? 1.5 : 1))) { v._flee = S.hour + 1; v.task = null; }
     }
     // người đang đuổi theo: tính lại đường khi thú chạy xa
     for (const v of S.villagers) {
@@ -276,7 +282,7 @@ const DEF = (() => {
   function tick(dt) {
     if (!S.def) migrate(S);
     const p = S.def.plan;
-    if (p && SIM.phase() === 'day' && S.hour >= p.hour) { S.def.plan = null; spawn(p.kind, p.count); }
+    if (p && SIM.phase() === 'day' && S.hour >= p.hour) { S.def.plan = null; spawn(p.kind, p.count, p.tile, p.warned); }
     ARMED = armedSet();
     if (!S.beasts.length) { if (S.def.active) calm(); return; }
     for (const b of S.beasts.slice()) updateBeast(b, dt);
@@ -352,6 +358,7 @@ const DEF = (() => {
         }
         let mult = ARMED.has(v.id) ? D.spearMult : 1;
         if (towers().some(o => Math.hypot((o.x + 1) * T - b.x, (o.y + 1) * T - b.y) < D.towerRange * T)) mult *= D.towerBonus;
+        if (b.warned) mult *= CFG.ROLES.warnedBonus;
         b.hp -= (D.baseDmg + D.perSkill * (v.skills.guard || 1)) * mult * dt;
         b.hit = 0.12;
         v.energy = clamp(v.energy - E.workDrain * 1.2 * dt, 0, 100);
@@ -414,7 +421,7 @@ const DEF = (() => {
     const want = guardsWanted();
     let have = S.villagers.filter(v => isGuard(v) && !v.child).length;
     if (have >= want) return;
-    const cand = S.villagers.filter(v => !v.child && !v.pregnant && !v.resting && !isGuard(v) && !(v.job && !v.job.auto) && !(v.job && v.job.type === 'hunt') && !(v.task && v.task.kind === 'work'))
+    const cand = S.villagers.filter(v => !v.child && !v.pregnant && !v.resting && !isGuard(v) && !(window.TRB && TRB.isRole(v)) && !(v.job && !v.job.auto) && !(v.job && v.job.type === 'hunt') && !(v.task && v.task.kind === 'work'))
       .sort((a, b) => (b.skills.guard + (b.main === 'guard' ? 2 : 0)) - (a.skills.guard + (a.main === 'guard' ? 2 : 0)));
     for (const v of cand) {
       if (have >= want) break;
@@ -599,7 +606,7 @@ const DEF = (() => {
   return {
     migrate, overnight, tick, preplan, planJob, task, handles, check, assign, autoGuards, options,
     huntMod, afterHunt, jobText, taskProgress, fireActions, craftAction, panelHTML, updatePanel,
-    pushDraw, drawGear, overlay, spearCap, SPR, BDESC, guardsWanted,
+    pushDraw, drawGear, overlay, spearCap, SPR, BDESC, guardsWanted, spawnTile, dirName,
   };
 })();
 window.DEF = DEF;

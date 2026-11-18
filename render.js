@@ -104,7 +104,9 @@ const RENDER = (() => {
     if (!t) return 'stand';
     if (t.kind === 'walk') return 'walk';
     if (t.kind === 'work' || t.kind === 'hunting' || t.kind === 'fight' || t.kind === 'craft') return 'work';
-    if (t.kind === 'cower') return 'sit';
+    if (t.kind === 'cower' || t.kind === 'pray') return 'sit';
+    if (t.kind === 'heal') return 'work';
+    if (t.kind === 'ritual') return 'walk';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
   }
@@ -188,7 +190,12 @@ const RENDER = (() => {
         case 'stump': list.push([foot - 8, () => lx.drawImage(ART.SPR.stump, X + 5, Y + 10)]); break;
         case 'bush': list.push([foot, () => lx.drawImage(o.stock > 0 ? ART.SPR.bush : ART.SPR.bushEmpty, X + 1, Y + T - 18)]); break;
         case 'boulder': list.push([foot, () => lx.drawImage(ART.SPR.boulder[o.v % 2], X, Y + T - 20)]); break;
-        case 'fire': list.push([foot, () => lx.drawImage(ART.SPR.fire[Math.floor(time * 8) % 3], X, Y - 2)]); break;
+        case 'fire': list.push([foot, () => {
+          const fs = ART.SPR.fire[Math.floor(time * 8) % 3];
+          if (window.TRB) TRB.drawFireBack(lx, X, Y, time);
+          lx.drawImage(fs, X, Y - 2);
+          if (window.TRB) TRB.drawFireFront(lx, X, Y, time, fs);
+        }]); break;
         case 'hut': list.push([foot, () => lx.drawImage(ART.SPR.hut, X, Y + 2 * T - 52)]); break;
         case 'site': list.push([foot, () => {
           const p = Math.min(1, o.progress / o.need);
@@ -227,6 +234,13 @@ const RENDER = (() => {
     // bóng mờ của dân được chọn (để thấy được khi khuất sau cây/lều)
     for (const v of S.villagers) if (ui.selected.has(v.id) && !v.inside) drawVillagerAt(v, true);
 
+    // ô lưới gợi ý khi đang chọn vị trí xây (để các dãy lều thẳng hàng)
+    if (ui.buildMode && !ui.popup) {
+      lx.strokeStyle = 'rgba(255,255,255,0.55)'; lx.lineWidth = 1; lx.setLineDash([3, 2]);
+      const b = CFG.BUILDINGS[ui.buildKind] || CFG.BUILDINGS.hut;
+      for (const [sx, sy] of EXP.freeSlots(ui.buildKind || 'hut')) lx.strokeRect(sx * T - ox + 1.5, sy * T - oy + 1.5, b.w * T - 3, b.h * T - 3);
+      lx.setLineDash([]);
+    }
     // bóng ma khi đặt lều
     if (ui.ghost) {
       const { x, y, ok } = ui.ghost;
@@ -255,6 +269,7 @@ const RENDER = (() => {
       }
       (v.child ? EXP.drawChild : ART.drawVillager)(lx, X, Y, v, time + v.id * 0.37, pose, pose === 'sit' ? 0 : v.facing, ghost ? 0.4 : undefined);
       if (!ghost && window.DEF) DEF.drawGear(lx, X, Y, v, pose);
+      if (!ghost && window.TRB) TRB.drawGear(lx, X, Y, v, pose);
       if (v.carry && !ghost) {
         if (v.carry.vis === 'fish') EXP.drawFishCarry(lx, X, Y);
         else {
@@ -282,7 +297,8 @@ const RENDER = (() => {
     const f = WORLD.fire();
     const fx = (f.x + 0.5) * T - ox, fy = (f.y + 0.5) * T - oy;
     const flick = 1 + Math.sin(time * 9) * 0.03 + Math.sin(time * 23) * 0.02;
-    let g = dkx.createRadialGradient(fx, fy, 4, fx, fy, 86 * flick);
+    const lm = window.TRB ? TRB.lightMult() : 1;
+    let g = dkx.createRadialGradient(fx, fy, 4, fx, fy, 86 * flick * lm);
     g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(0.55, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
     dkx.fillStyle = g; dkx.fillRect(0, 0, vw, vh);
     for (const o of S.objects) if (o.type === 'hut' || o.type === 'longhouse') {
@@ -293,9 +309,9 @@ const RENDER = (() => {
     }
     lx.drawImage(dk, 0, 0);
     lx.globalCompositeOperation = 'lighter';
-    g = lx.createRadialGradient(fx, fy, 2, fx, fy, 50 * flick);
+    g = lx.createRadialGradient(fx, fy, 2, fx, fy, 50 * flick * lm);
     g.addColorStop(0, `rgba(255,150,50,${0.35 * a / 0.6})`); g.addColorStop(1, 'rgba(255,120,30,0)');
-    lx.fillStyle = g; lx.fillRect(fx - 60, fy - 60, 120, 120);
+    lx.fillStyle = g; lx.fillRect(fx - 60 * lm, fy - 60 * lm, 120 * lm, 120 * lm);
     lx.globalCompositeOperation = 'source-over';
   }
 

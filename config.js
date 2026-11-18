@@ -29,8 +29,9 @@ window.CFG = {
 
   GATHER: {
     berry: { label: 'Hái quả',  res: 'food',  hours: 0.7, perTrip: 2, stock: 4, seeds: 2, regrowDays: 4, skill: 'gather' },
-    wood:  { label: 'Đốn gỗ',   res: 'wood',  hours: 1.2, perTrip: 2, stock: 6, skill: 'build' },
-    stone: { label: 'Nhặt đá',  res: 'stone', hours: 1.5, perTrip: 2, stock: 8, skill: 'build' },
+    wood:  { label: 'Đốn gỗ',   res: 'wood',  hours: 1.2, perTrip: 3, stock: 9, skill: 'build' },
+    stone: { label: 'Nhặt đá',  res: 'stone', hours: 1.2, perTrip: 3, stock: 12, skill: 'build' },
+    quarry: { label: 'Khai thác đá', res: 'stone', hours: 1.4, perTrip: 4, stock: 40, skill: 'build', regen: 16 },
     fish:  { label: 'Câu cá',   res: 'food',  hours: 1.0, perTrip: 3, stock: 9, skill: 'gather', regen: 4 },
   },
 
@@ -85,7 +86,7 @@ window.CFG = {
   // ---- Tự động & phát triển ----
   AUTO: { interval: 0.25, defaultOn: true },     // bộ lập kế hoạch chạy mỗi 0.25 giờ game
   POP: { childDays: 4, newcomerChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 40 },
-  REGROW: { saplingChance: 0.3, saplingDays: 3, boulderChance: 0.45, boulderMaxExtra: 4 },
+  REGROW: { saplingChance: 0.3, saplingDays: 3, boulderChance: 0.75, boulderMaxExtra: 10 },
   NEW_PLOT_RADIUS: 16,
   FAMILY: { coupleBond: 60, pregnancyDays: 3, pregnancyChance: 0.4, birthGapDays: 4, pregnantWork: 0.7 }, // chỉ có thể mang thai khi vợ chồng ngủ chung một lều riêng
   FISH: { unlock: 8, spots: 5 },
@@ -96,12 +97,30 @@ window.CFG = {
   BUILDINGS: {
     hut:       { name: 'Lều cỏ',         w: 2, h: 2, wood: 10, stone: 5,  hours: 12, unlock: 0 },
     rack:      { name: 'Giàn phơi thịt', w: 2, h: 2, wood: 6,  stone: 2,  hours: 6,  unlock: 7,  max: 2, foodCap: 30, meatBonus: 0.25 },
-    granary:   { name: 'Kho lương',      w: 2, h: 2, wood: 12, stone: 6,  hours: 10, unlock: 9,  max: 2, foodCap: 60 },
+    granary:   { name: 'Kho lương',      w: 2, h: 2, wood: 12, stone: 6,  hours: 10, unlock: 9,  max: 8, foodCap: 60 },
     longhouse: { name: 'Nhà dài',        w: 3, h: 2, wood: 18, stone: 10, hours: 16, unlock: 10, beds: 6 },
     healer:    { name: 'Lều thảo dược',  w: 2, h: 2, wood: 10, stone: 6,  hours: 10, unlock: 12, max: 1 },
     workshop:  { name: 'Xưởng chế tác',  w: 2, h: 2, wood: 14, stone: 10, hours: 12, unlock: 14, max: 1 },
     watchtower: { name: 'Chòi canh',     w: 2, h: 2, wood: 8,  stone: 4,  hours: 8,  unlock: 8,  max: 2 },
   },
+
+  // Cấp lửa trại = cấp bộ lạc
+  TRIBE: {
+    levels: [
+      { name: 'Bếp lửa',          pop: 0,  cap: 14 },
+      { name: 'Lửa trại',         pop: 6,  cap: 22, wood: 15, stone: 10, hours: 10 },
+      { name: 'Đống lửa lớn',     pop: 12, cap: 30, wood: 30, stone: 24, hours: 14 },
+      { name: 'Lửa thiêng',       pop: 18, cap: 36, wood: 45, stone: 40, hours: 18 },
+      { name: 'Ngọn lửa tổ tiên', pop: 26, cap: 40, wood: 60, stone: 60, hours: 22 },
+    ],
+    radiusPerLevel: 2,     // bán kính xây dựng +2 ô mỗi cấp
+    moralePerLevel: 1,     // mỗi đêm tinh thần +1 mỗi cấp trên 1
+    fireSafePerLevel: 0.3, // thú dữ sợ lửa xa hơn
+    prophetLevel: 2, shamanLevel: 3, quarryLevel: 2,
+    chiefWork: 0.03,       // tù trưởng khỏe mạnh: cả làng làm nhanh hơn 3% mỗi cấp bộ lạc
+  },
+  ROLES: { chiefName: 'Hiếu', healRate: 30, healHours: 0.6, rainChance: 0.5, prophetMorale: 3, shamanHunt: 0.05, warnedBonus: 1.2 },
+  QUARRY: { spots: 3 },
 
   // Dụng cụ săn bắn: giáo đá — chế ở bếp lửa (hoặc xưởng chế tác, nhanh hơn)
   TOOLS: {
