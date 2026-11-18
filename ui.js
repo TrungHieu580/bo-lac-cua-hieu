@@ -473,6 +473,8 @@ const UI = (() => {
         <li><b>Bộ lạc:</b> chạm vào lửa trại để nâng cấp — cấp lửa trại là cấp bộ lạc (5 cấp), tăng dân số tối đa, bán kính xây dựng, mở khóa Mỏ đá, Tiên tri (cấp 2), Vu sư (cấp 3). Hiếu là Tù trưởng (đội mũ lông): tù trưởng khỏe thì cả làng làm nhanh hơn.</li>
         <li><b>Nhiệm vụ:</b> ô Mục tiêu hiện 3 nhiệm vụ đang làm; xong thì bấm <b>Nhận</b> để lấy thưởng (gỗ, đá, thức ăn, giáo, kỹ năng, phúc lành...). Để quá 2 ngày thì làng tự nhận. Danh sách đủ ở bảng Tự động.</li>
         <li><b>Nhà chữa bệnh:</b> người có sức khỏe dưới 45 tự vào nằm chữa (dấu cộng xanh trên mái), hồi nhanh, vu sư tới chăm thì càng nhanh.</li>
+        <li><b>Nhà bếp</b> (7 dân): một người nấu ăn mỗi chiều, bữa tối tiết kiệm thức ăn và bổ dưỡng hơn. <b>Chuồng thú</b> (9 dân): nuôi dê — có người chăn thả mỗi sáng thì dê cho sữa, sinh con; coi chừng sói vồ dê!</li>
+        <li><b>Công trình đồ sộ:</b> Đền tổ tiên (bộ lạc cấp 3), Vòng đá thiêng (cấp 4), Đại sảnh tù trưởng (cấp 5) — tốn nhiều gỗ đá, cả làng góp sức nhiều ngày, đổi lại lợi ích lớn.</li>
         <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>
         <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
         <li><b>Camera:</b> kéo để di chuyển, cuộn chuột / chụm hai ngón để phóng to. Phím: WASD/mũi tên, Space tạm dừng, 1-2-3 tốc độ, B xây dựng, V dân làng, J nhật ký, Esc đóng.</li>

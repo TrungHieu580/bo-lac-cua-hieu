@@ -141,6 +141,7 @@ const DEF = (() => {
       const d = dist(v, b);
       if (d < bd) { bd = d; best = v; }
     }
+    if (!best && window.VIL) { const pt = VIL.penTarget(b); if (pt) return pt; }
     return best ? { v: best, x: best.x, y: best.y, goals: [SIM.tileOf(best)] } : null;
   }
 
@@ -196,6 +197,11 @@ const DEF = (() => {
       b.x += (tgt.x + side * 11 - b.x) * k; b.y += (tgt.y + 1 - b.y) * k;
       b.atk += dt;
       if (b.atk >= D.atkEvery) { b.atk = 0; hitVillager(tgt.v, b); }
+      return;
+    }
+    if (tgt.pen && d < 1.8 * T) { // vồ dê trong chuồng
+      b.path = null; b.atk += dt;
+      if (b.atk >= D.atkEvery * 2) { b.atk = 0; VIL.penAttacked(tgt.pen, K.name); startFlee(b, `${K.name} tha mồi chạy vào rừng.`); }
       return;
     }
     if (tgt.storage && d < 1.7 * T) { // phá kho

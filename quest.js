@@ -39,6 +39,11 @@ const QST = (() => {
     { id: 'tribe4',    t: 'Đưa bộ lạc lên cấp 4',          cur: () => lvl(),                    need: 4,   r: { wood: 50, stone: 40 } },
     { id: 'day30',     t: 'Bộ lạc tồn tại 30 ngày',        cur: () => S.day,                    need: 30,  r: { food: 100, morale: 10 } },
     { id: 'pop30',     t: 'Bộ lạc có 30 người',            cur: () => S.villagers.length,       need: 30,  r: { wood: 80, stone: 80 } },
+    { id: 'kitchen',   t: 'Xây Nhà bếp',                   cur: () => cnt('kitchen'),           need: 1,   r: { food: 25, morale: 5 } },
+    { id: 'goats6',    t: 'Nuôi đàn dê 6 con',             cur: () => (window.VIL ? VIL.animals() : 0), need: 6, r: { food: 30, seeds: 6 } },
+    { id: 'temple',    t: 'Hoàn thành Đền tổ tiên',        cur: () => cnt('temple'),            need: 1,   r: { buff: [1.1, 3], morale: 10 } },
+    { id: 'stonering', t: 'Dựng Vòng đá thiêng',           cur: () => cnt('stonering'),         need: 1,   r: { seeds: 15, bless: 1, health: 15 } },
+    { id: 'greathall', t: 'Hoàn thành Đại sảnh tù trưởng',  cur: () => cnt('greathall'),         need: 1,   r: { buff: [1.2, 5], morale: 20 } },
     { id: 'tribe5',    t: 'Đưa bộ lạc lên cấp 5',          cur: () => lvl(),                    need: 5,   r: { buff: [1.15, 5], morale: 20, health: 20 } },
   ];
   const SKN = () => CFG.SKILL_NAMES;

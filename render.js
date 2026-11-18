@@ -105,7 +105,7 @@ const RENDER = (() => {
     if (t.kind === 'walk') return 'walk';
     if (t.kind === 'work' || t.kind === 'hunting' || t.kind === 'fight' || t.kind === 'craft') return 'work';
     if (t.kind === 'cower' || t.kind === 'pray') return 'sit';
-    if (t.kind === 'heal' || t.kind === 'healHouse') return 'work';
+    if (t.kind === 'heal' || t.kind === 'healHouse' || t.kind === 'cook') return 'work';
     if (t.kind === 'ritual') return 'walk';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
@@ -228,6 +228,7 @@ const RENDER = (() => {
       list.push([v.y, () => drawVillagerAt(v, false)]);
     }
     if (window.DEF) DEF.pushDraw(list, lx, L, Tp, time, shadow);
+    if (window.VIL) VIL.pushDraw(list, lx, L, Tp, time, shadow);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 

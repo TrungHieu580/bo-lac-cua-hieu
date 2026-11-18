@@ -103,6 +103,12 @@ window.CFG = {
     workshop:  { name: 'Xưởng chế tác',  w: 2, h: 2, wood: 14, stone: 10, hours: 12, unlock: 14, max: 1 },
     watchtower: { name: 'Chòi canh',     w: 2, h: 2, wood: 8,  stone: 4,  hours: 8,  unlock: 8,  max: 2 },
     sickhouse: { name: 'Nhà chữa bệnh',  w: 3, h: 2, wood: 12, stone: 8,  hours: 10, unlock: 6,  max: 2 },
+    kitchen:   { name: 'Nhà bếp',        w: 2, h: 2, wood: 12, stone: 10, hours: 10, unlock: 7,  max: 1 },
+    pen:       { name: 'Chuồng thú',     w: 3, h: 3, wood: 20, stone: 4,  hours: 12, unlock: 9,  max: 3 },
+    // Công trình đồ sộ: mở theo cấp bộ lạc, tốn nhiều vật liệu và nhiều ngày công
+    temple:    { name: 'Đền tổ tiên',        w: 4, h: 3, wood: 80,  stone: 120, hours: 40, unlock: 0, tribe: 3, max: 1, grand: true },
+    stonering: { name: 'Vòng đá thiêng',     w: 4, h: 4, wood: 40,  stone: 200, hours: 55, unlock: 0, tribe: 4, max: 1, grand: true },
+    greathall: { name: 'Đại sảnh tù trưởng', w: 5, h: 3, wood: 200, stone: 150, hours: 70, unlock: 0, tribe: 5, max: 1, grand: true, beds: 12 },
   },
 
   // Cấp lửa trại = cấp bộ lạc
@@ -122,6 +128,9 @@ window.CFG = {
   },
   ROLES: { chiefName: 'Hiếu', healRate: 30, healHours: 0.6, rainChance: 0.5, prophetMorale: 3, shamanHunt: 0.05, warnedBonus: 1.2 },
   QUARRY: { spots: 3 },
+  KITCHEN: { needHours: 2, maxHours: 3, save: 0.25, health: 3, morale: 3 }, // bếp nấu đủ 2 giờ/ngày: bữa tối tiết kiệm 25% thức ăn, +3 sức khỏe, +3 tinh thần
+  PEN: { start: 2, cap: 6, breed: 0.35, escape: 0.25, milkPer: 2, meat: 6, capture: 0.3, herdHours: 1 },
+  GRAND: { templeMorale: 5, templeNewcomer: 0.15, ringGrow: 0.3, ringMorale: 3, hallWork: 0.05 },
   CARE: { healRate: 10, patients: 4, goAt: 45, shamanBonus: 8 }, // Nhà chữa bệnh: người sức khỏe dưới 45 vào nằm chữa, hồi 10/giờ (+8 khi có vu sư chăm)
   GATHER_RATIO: 1.3,       // tỉ lệ gỗ : đá mà làng cố giữ khi đi khai thác
 

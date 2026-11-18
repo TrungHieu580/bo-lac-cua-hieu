@@ -153,6 +153,7 @@ const SIM = (() => {
     if (window.EXP && EXP.handles(spec.type)) return EXP.check(spec, vs);
     if (window.DEF && DEF.handles(spec.type)) return DEF.check(spec, vs);
     if (window.TRB && TRB.handles(spec.type)) return TRB.check(spec, vs);
+    if (window.VIL && VIL.handles(spec.type)) return VIL.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
     const needPeople = (n) => vs.length < n ? (n - vs.length === 1 ? `Cần thêm một thành viên` : `Cần thêm ${n - vs.length} thành viên`) : null;
@@ -226,6 +227,7 @@ const SIM = (() => {
     if (window.EXP && EXP.handles(spec.type)) return EXP.assign(spec, vs, c);
     if (window.DEF && DEF.handles(spec.type)) return DEF.assign(spec, vs);
     if (window.TRB && TRB.handles(spec.type)) return TRB.assign(spec, vs);
+    if (window.VIL && VIL.handles(spec.type)) return VIL.assign(spec, vs);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
       c.later = true;
@@ -359,6 +361,7 @@ const SIM = (() => {
       });
       const msg = `Nhóm săn (${names(vs)}) hạ được thú, mang về ${meat} phần thịt.`;
       S.today.hunts.push(msg); log(msg, 'ev'); EV.emit('toast', `Đi săn thành công: +${meat} thịt (đang mang về)`);
+      if (window.VIL) VIL.huntCapture(vs);
     } else {
       vs.forEach(v => { v.morale = clamp(v.morale + (close ? CFG.MORALE.huntFail / 2 : CFG.MORALE.huntFail), 0, 100); v.note = 'Đi săn về tay không'; });
       const msg = `Nhóm săn (${names(vs)}) trở về tay không.` + (close ? ' Nhờ thân thiết, họ vẫn giữ tinh thần.' : '');
@@ -451,14 +454,14 @@ const SIM = (() => {
   }
   // ---------------- NGỦ TRONG LỀU ----------------
   const bedtime = () => S.hour >= CFG.BEDTIME;
-  function bedsOf(h) { return h.type === 'longhouse' ? CFG.BUILDINGS.longhouse.beds : CFG.HUT.sleepers; }
+  function bedsOf(h) { return h.type === 'longhouse' || h.type === 'greathall' ? CFG.BUILDINGS[h.type].beds : CFG.HUT.sleepers; }
   function doorTiles(h) {
     const y = h.y + h.h - 1;
-    return h.w >= 3 ? [[h.x + 1, y]] : [[h.x, y], [h.x + 1, y]];
+    return h.w >= 3 ? [[h.x + Math.floor(h.w / 2), y]] : [[h.x, y], [h.x + 1, y]];
   }
   // Chia chỗ ngủ: mỗi cặp vợ chồng một lều riêng, con nhỏ ngủ cùng cha mẹ, người còn lại vào lều chung / nhà dài
   function assignBeds() {
-    const huts = S.objects.filter(o => o.type === 'hut' || o.type === 'longhouse');
+    const huts = S.objects.filter(o => o.type === 'hut' || o.type === 'longhouse' || o.type === 'greathall');
     const free = new Map(huts.map(h => [h.id, bedsOf(h)]));
     const occ = new Map(huts.map(h => [h.id, 0]));
     const put = (v, h) => { v.bed = h.id; free.set(h.id, free.get(h.id) - 1); occ.set(h.id, occ.get(h.id) + 1); };
@@ -593,6 +596,7 @@ const SIM = (() => {
     }
     if (window.DEF && DEF.planJob(v, j)) return;
     if (window.TRB && TRB.planJob(v, j)) return;
+    if (window.VIL && VIL.planJob(v, j)) return;
     v.job = null;
   }
 
@@ -760,7 +764,7 @@ const SIM = (() => {
         t.time -= dt;
         if (t.time <= 0 || v.job) v.task = null;
         break;
-      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt))) v.task = null;
+      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt)) && !(window.VIL && VIL.task(v, t, dt))) v.task = null;
     }
   }
 
@@ -798,6 +802,7 @@ const SIM = (() => {
     EV.emit('float', { x: (f.x + 0.5) * T, y: f.y * T - 6, text: `−${S.today.eaten}`, icon: 'food' });
     if (S.today.missing.length) { event(`Bữa tối thiếu thức ăn: ${S.today.missing.join(', ')} không có khẩu phần.`); EV.emit('toast', `Thiếu ăn! ${S.today.missing.join(', ')} nhịn đói`); }
     else log(`Bữa tối: cả bộ lạc ăn ${S.today.eaten} khẩu phần.`);
+    if (window.VIL) VIL.afterMeal();
   }
 
   const STORIES = [
@@ -885,6 +890,7 @@ const SIM = (() => {
     if (window.EXP) EXP.overnight();
     if (window.DEF) DEF.overnight();
     if (window.TRB) TRB.overnight();
+    if (window.VIL) VIL.overnight();
     if (window.QST) QST.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
@@ -949,7 +955,7 @@ const SIM = (() => {
     if (t0 && t0.kind === 'sleep') { const h = WORLD.byId(v.inside); return h && h.type === 'longhouse' ? 'Đang ngủ trong nhà dài' : 'Đang ngủ trong lều'; }
     if (t0 && t0.kind === 'sleepout') return 'Ngủ ngoài trời bên lửa (thiếu chỗ ngủ)';
     if (bedtime() && v.bed && !v.carry) return 'Đang về lều ngủ';
-    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v));
+    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v)) || (window.VIL && VIL.jobText(v));
     if (dj) return dj;
     if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';
