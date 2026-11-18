@@ -109,7 +109,7 @@ const UI = (() => {
     closePopup();
     if (state.sheet === kind) { closeSheet(); return; }
     state.sheet = kind;
-    state.buildMode = false; state.ghost = null; $('#buildhint').classList.add('hidden');
+    state.buildMode = false; state.moveId = null; state.ghost = null; $('#buildhint').classList.add('hidden');
     renderSheet(true);
     $('#panel').classList.remove('hidden');
     document.querySelectorAll('#bottom .nb').forEach(b => b.classList.toggle('on', b.dataset.k === kind));
@@ -222,6 +222,12 @@ const UI = (() => {
   function selectedVs() { return S.villagers.filter(v => state.selected.has(v.id)); }
 
   function actionsFor(p) {
+    if (p.kind === 'moveto' && window.LAY) return LAY.moveActions(p);
+    const r = actionsFor0(p);
+    if (window.LAY) LAY.addMoveAction(p, r);
+    return r;
+  }
+  function actionsFor0(p) {
     const out = { title: '', desc: '', actions: [] };
     const n = Math.max(1, state.selected.size);
     if (p.kind === 'place') return EXP.placeActions(p, n);
@@ -320,7 +326,7 @@ const UI = (() => {
     closeSheet();
     state.popup = p;
     state.target = p.kind === 'obj' ? p.id : null;
-    state.ghost = EXP.ghostFor(p);
+    state.ghost = p.kind === 'moveto' && window.LAY ? LAY.ghost(p) : EXP.ghostFor(p);
     state.moveTile = p.kind === 'tile' ? [p.tx, p.ty] : null;
     renderPopup();
     $('#popup').classList.remove('hidden');
@@ -343,7 +349,7 @@ const UI = (() => {
         extra = vs.length ? `<div class="est">Với ${vs.length} người: thành công ~<b>${Math.round(e.chance * 100)}%</b> · sản lượng dự kiến <b>${e.min}–${e.max}</b> thịt · rủi ro: <b class="risk-${e.risk}">${e.risk}</b>${S.weather === 'rain' ? ' (mưa làm giảm cơ hội)' : ''}</div>` : `<div class="est">Chọn người để xem tỷ lệ thành công, sản lượng và rủi ro.</div>`;
       }
       return `<div class="act"><div class="act-main"><b>${a.label}</b><small>${a.detail}</small>${extra}${c.ok ? '' : `<div class="act-msg err">${esc(c.msg)}</div>`}</div>
-        <button class="btn go" data-i="${i}" ${c.ok ? '' : 'disabled'}>${state.selected.size ? 'Giao việc' : 'Chọn người'}</button></div>`;
+        <button class="btn go" data-i="${i}" ${c.ok ? '' : 'disabled'}>${a.btn ? a.btn : state.selected.size ? 'Giao việc' : 'Chọn người'}</button></div>`;
     }).join('');
     $('#popup').innerHTML = `<div class="sheet-head"><h3>${esc(info.title)}</h3><button class="x" data-close>✕</button></div>
       <div class="sheet-sub">${info.desc}</div>
@@ -359,10 +365,10 @@ const UI = (() => {
     const vs = selectedVs();
     const r = SIM.assign(a.spec, vs);
     if (!r.ok) { toast(r.msg, 'err'); renderPopup(); return; }
-    let msg = vs.length ? `Đã giao "${a.label}" cho ${vs.map(v => v.name).join(', ')}` : `Đã thực hiện: ${a.label}`;
+    let msg = r.msg ? r.msg : a.btn ? `Đã thực hiện: ${a.label}` : vs.length ? `Đã giao "${a.label}" cho ${vs.map(v => v.name).join(', ')}` : `Đã thực hiện: ${a.label}`;
     if (r.later) msg += ' — sẽ bắt đầu từ sáng mai';
-    toast(msg, 'ok');
-    if (a.spec.type === 'buildHut' || a.spec.type === 'buildAt') { state.buildMode = false; $('#buildhint').classList.add('hidden'); }
+    if (!r.quiet) toast(msg, 'ok');
+    if (a.spec.type === 'buildHut' || a.spec.type === 'buildAt' || a.spec.type === 'moveBuilding') { state.buildMode = false; state.moveId = null; $('#buildhint').classList.add('hidden'); }
     state.ghost = null;
     closePopup();
     GAME.save();
@@ -374,12 +380,13 @@ const UI = (() => {
   function tapMap(cssX, cssY, additive) {
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
     if (state.buildMode) {
-      const b = CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
-      const sn = EXP.snapBuild(state.buildKind || 'hut', wx, wy);
+      const mo = state.moveId ? WORLD.byId(state.moveId) : null;
+      const b = mo || CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
+      const sn = state.freePlace || additive ? null : EXP.snapBuild(state.buildKind || 'hut', wx, wy);
       const x = sn ? sn[0] : Math.round(wx / T - b.w / 2), y = sn ? sn[1] : Math.round(wy / T - b.h / 2);
-      const v = SIM.validHutSpot(x, y, b.w, b.h);
+      const v = mo ? LAY.validMove(mo.id, x, y) : SIM.validHutSpot(x, y, b.w, b.h);
       if (!v.ok) { state.ghost = { x, y, ok: false, kind: state.buildKind, w: b.w, h: b.h }; toast(v.msg, 'err'); return; }
-      openPopup({ kind: 'place', b: state.buildKind || 'hut', x, y });
+      openPopup(mo ? { kind: 'moveto', id: mo.id, x, y } : { kind: 'place', b: state.buildKind || 'hut', x, y });
       return;
     }
     const tol = Math.max(2, 8 * RENDER.dpr / RENDER.cam.zoom);
@@ -406,10 +413,11 @@ const UI = (() => {
   function hoverMap(cssX, cssY) {
     if (!state.buildMode || state.popup) return;
     const [wx, wy] = RENDER.screenToWorld(cssX, cssY);
-    const b = CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
-    const sn = EXP.snapBuild(state.buildKind || 'hut', wx, wy);
+    const mo = state.moveId ? WORLD.byId(state.moveId) : null;
+    const b = mo || CFG.BUILDINGS[state.buildKind] || CFG.BUILDINGS.hut;
+    const sn = state.freePlace ? null : EXP.snapBuild(state.buildKind || 'hut', wx, wy);
     const x = sn ? sn[0] : Math.round(wx / T - b.w / 2), y = sn ? sn[1] : Math.round(wy / T - b.h / 2);
-    state.ghost = { x, y, ok: SIM.validHutSpot(x, y, b.w, b.h).ok, kind: state.buildKind, w: b.w, h: b.h };
+    state.ghost = { x, y, ok: mo ? LAY.validMove(mo.id, x, y).ok : SIM.validHutSpot(x, y, b.w, b.h).ok, kind: state.buildKind, w: b.w, h: b.h };
   }
 
   function startBuildMode(kind) {
@@ -419,12 +427,25 @@ const UI = (() => {
     if (S.res.wood < h.wood) { toast(`Cần thêm ${h.wood - S.res.wood} gỗ để xây ${h.name}`, 'err'); return; }
     if (S.res.stone < h.stone) { toast(`Cần thêm ${h.stone - S.res.stone} đá để xây ${h.name}`, 'err'); return; }
     state.buildKind = kind;
-    state.buildMode = true;
+    state.buildMode = true; state.moveId = null;
+    $('#bh-text').textContent = `Chạm vào ô trống gần bếp lửa để đặt ${h.name}`;
+    updateGridBtn();
     $('#buildhint').classList.remove('hidden');
     const f = WORLD.fire();
     RENDER.centerOn((f.x + 0.5) * T, (f.y + 0.5) * T);
   }
-  function cancelBuildMode() { state.buildMode = false; state.ghost = null; $('#buildhint').classList.add('hidden'); closePopup(); }
+  function cancelBuildMode() { state.buildMode = false; state.moveId = null; state.ghost = null; $('#buildhint').classList.add('hidden'); closePopup(); }
+  // Chế độ di chuyển công trình: dùng lại chế độ xây (ô lưới gợi ý, bóng ma)
+  function startMoveMode(id) {
+    const o = WORLD.byId(id);
+    if (!o || !window.LAY) return;
+    closeSheet(); closePopup();
+    state.buildKind = LAY.kindOf(o); state.moveId = id; state.buildMode = true;
+    $('#bh-text').textContent = `Chạm vào chỗ mới để chuyển ${LAY.nameOf(o)}`;
+    updateGridBtn();
+    $('#buildhint').classList.remove('hidden');
+  }
+  function updateGridBtn() { const g = $('#bh-grid'); if (g) g.textContent = state.freePlace ? 'Lưới: Tắt' : 'Lưới: Bật'; }
 
   // ---------------- MODAL ----------------
   function modal(html, onBind) {
@@ -475,6 +496,7 @@ const UI = (() => {
         <li><b>Nhà chữa bệnh:</b> người có sức khỏe dưới 45 tự vào nằm chữa (dấu cộng xanh trên mái), hồi nhanh, vu sư tới chăm thì càng nhanh.</li>
         <li><b>Nhà bếp</b> (7 dân): một người nấu ăn mỗi chiều, bữa tối tiết kiệm thức ăn và bổ dưỡng hơn. <b>Chuồng thú</b> (9 dân): nuôi dê — có người chăn thả mỗi sáng thì dê cho sữa, sinh con; coi chừng sói vồ dê!</li>
         <li><b>Công trình đồ sộ:</b> Đền tổ tiên (bộ lạc cấp 3), Vòng đá thiêng (cấp 4), Đại sảnh tù trưởng (cấp 5) — tốn nhiều gỗ đá, cả làng góp sức nhiều ngày, đổi lại lợi ích lớn.</li>
+        <li><b>Di chuyển công trình:</b> chạm vào lều, kho, chuồng, đền... → <b>Di chuyển</b>, rồi chạm chỗ mới và bấm <b>Chuyển</b> (miễn phí, chuyển ngay). Nút <b>Lưới: Bật/Tắt</b> để hít vào lưới cho thẳng hàng hoặc đặt tự do (máy tính: giữ Shift khi chạm).</li>
         <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>
         <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
         <li><b>Camera:</b> kéo để di chuyển, cuộn chuột / chụm hai ngón để phóng to. Phím: WASD/mũi tên, Space tạm dừng, 1-2-3 tốc độ, B xây dựng, V dân làng, J nhật ký, Esc đóng.</li>
@@ -587,6 +609,7 @@ const UI = (() => {
       if (go && !go.disabled) doAction(+go.dataset.i);
     });
     $('#bh-cancel').addEventListener('click', cancelBuildMode);
+    $('#bh-grid').addEventListener('click', () => { state.freePlace = !state.freePlace; updateGridBtn(); toast(state.freePlace ? 'Đặt tự do (không hít vào lưới)' : 'Hít vào lưới để thẳng hàng', 'ok'); });
     EV.on('toast', (m) => toast(m));
     EV.on('dayEnd', (j) => { if (EXP.autoSkip(j)) return; setTimeout(() => showDayEnd(j), 50); });
     EV.on('plot', () => { if (state.popup) renderPopup(); });
@@ -617,5 +640,5 @@ const UI = (() => {
     state.selected.clear(); closePopup(); closeSheet(); cancelBuildMode();
   }
 
-  return { state, bind, update, refresh, toast, tapMap, hoverMap, showMenu, showIntro, showDayEnd, openSheet, togglePause, setSpeed, cycleSpeed, escape, startBuildMode, resetForGame, openPopup, closeModal };
+  return { state, bind, update, refresh, toast, tapMap, hoverMap, showMenu, showIntro, showDayEnd, openSheet, togglePause, setSpeed, cycleSpeed, escape, startBuildMode, startMoveMode, resetForGame, openPopup, closeModal };
 })();

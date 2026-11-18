@@ -141,7 +141,7 @@ const EXP = (() => {
     }
     return SP;
   }
-  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; if (k === 'sickhouse' && window.TRB) return TRB.SPR.sickhouse; if (window.VIL && VIL.SPR[k] && k !== 'goat') return VIL.SPR[k]; return sprites()[k] || ART.SPR.hut; }
+  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'storage') return ART.SPR.storage; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; if (k === 'sickhouse' && window.TRB) return TRB.SPR.sickhouse; if (window.VIL && VIL.SPR[k] && k !== 'goat') return VIL.SPR[k]; return sprites()[k] || ART.SPR.hut; }
 
   function drawObj(o, X, Y, lx) {
     const sp = sprites();

@@ -154,6 +154,7 @@ const SIM = (() => {
     if (window.DEF && DEF.handles(spec.type)) return DEF.check(spec, vs);
     if (window.TRB && TRB.handles(spec.type)) return TRB.check(spec, vs);
     if (window.VIL && VIL.handles(spec.type)) return VIL.check(spec, vs);
+    if (window.LAY && LAY.handles(spec.type)) return LAY.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
     const needPeople = (n) => vs.length < n ? (n - vs.length === 1 ? `Cần thêm một thành viên` : `Cần thêm ${n - vs.length} thành viên`) : null;
@@ -228,6 +229,7 @@ const SIM = (() => {
     if (window.DEF && DEF.handles(spec.type)) return DEF.assign(spec, vs);
     if (window.TRB && TRB.handles(spec.type)) return TRB.assign(spec, vs);
     if (window.VIL && VIL.handles(spec.type)) return VIL.assign(spec, vs);
+    if (window.LAY && LAY.handles(spec.type)) return LAY.assign(spec, vs);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
       c.later = true;

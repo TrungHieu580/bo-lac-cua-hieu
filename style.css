@@ -68,7 +68,7 @@ body { font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; col
 .toast.ok { border-color: #8fd14f; }
 .toast.out { opacity: 0; transform: translateY(-6px); }
 
-#buildhint { position: absolute; top: 8px; right: 8px; z-index: 4; background: rgba(40,24,10,.92); border: 2px solid #8fd14f; padding: 6px 10px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+#buildhint { position: absolute; top: 8px; right: 8px; z-index: 4; background: rgba(40,24,10,.92); border: 2px solid #8fd14f; padding: 6px 10px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: calc(100% - 16px); }
 
 #selbar {
   position: absolute; left: 50%; transform: translateX(-50%); bottom: 8px; z-index: 3; width: min(96%, 520px);
@@ -195,3 +195,5 @@ img.bi { width: 22px; height: 22px; }
   #goals { font-size: 11.5px; max-width: 200px; padding: 5px 8px; }
   .nb { font-size: 10.5px; }
 }
+
+@media (max-width: 700px) { #buildhint { top: auto; bottom: 8px; left: 8px; right: 8px; max-width: none; justify-content: space-between; } }

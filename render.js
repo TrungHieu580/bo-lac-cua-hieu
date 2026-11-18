@@ -236,7 +236,7 @@ const RENDER = (() => {
     for (const v of S.villagers) if (ui.selected.has(v.id) && !v.inside) drawVillagerAt(v, true);
 
     // ô lưới gợi ý khi đang chọn vị trí xây (để các dãy lều thẳng hàng)
-    if (ui.buildMode && !ui.popup) {
+    if (ui.buildMode && !ui.popup && !ui.freePlace) {
       lx.strokeStyle = 'rgba(255,255,255,0.55)'; lx.lineWidth = 1; lx.setLineDash([3, 2]);
       const b = CFG.BUILDINGS[ui.buildKind] || CFG.BUILDINGS.hut;
       for (const [sx, sy] of EXP.freeSlots(ui.buildKind || 'hut')) lx.strokeRect(sx * T - ox + 1.5, sy * T - oy + 1.5, b.w * T - 3, b.h * T - 3);
