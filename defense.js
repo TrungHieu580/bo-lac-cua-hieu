@@ -11,7 +11,7 @@ const DEF = (() => {
   const tc = (tx, ty) => [tx * T + T / 2, ty * T + T * 0.75];
   const tileOfP = (x, y) => [Math.floor(x / T), Math.floor((y - 1) / T)];
   const names = (vs) => vs.map(v => v.name).join(', ');
-  const safeR = () => D.fireSafe + (window.TRB ? TRB.fireSafeBonus() : 0);
+  const safeR = () => (window.SAGA && SAGA.fireOut()) ? 0 : D.fireSafe + (window.TRB ? TRB.fireSafeBonus() : 0);
   const fireP = () => { const f = WORLD.fire(); return { x: (f.x + 0.5) * T, y: (f.y + 0.6) * T }; };
   const GUARD_START = { 'Hiếu': 2, 'Đá': 4, 'Gió': 3, 'Mây': 1, 'Nụ': 2, 'Sương': 1 };
 
@@ -225,15 +225,21 @@ const DEF = (() => {
   function kill(b, killer) {
     const K = BT[b.kind], fs = fightersOf(b);
     if (!fs.includes(killer)) fs.push(killer);
-    remove(b); S.def.kills++;
-    if (!killer.carry) killer.carry = { food: K.meat, vis: 'meat' };
-    else { S.res.food = Math.min(SIM.cap('food'), S.res.food + K.meat); }
+    remove(b); if (!K.raid) S.def.kills++;
+    if (window.SAGA) SAGA.beastKilled(b, fs);
+    if (K.raid) {
+      SIM.event(`${names(fs)} đánh gục một chiến binh đột kích, hắn bỏ chạy về bộ lạc!`);
+      EV.emit('toast', 'Đánh lui một kẻ đột kích!');
+    } else {
+      if (!killer.carry) killer.carry = { food: K.meat, vis: 'meat' };
+      else { S.res.food = Math.min(SIM.cap('food'), S.res.food + K.meat); }
+      SIM.event(`${names(fs)} đã hạ gục ${K.name.toLowerCase()}! Mang về ${K.meat} phần thịt, cả làng yên tâm hơn.`);
+      EV.emit('toast', `Đã hạ gục ${K.name.toLowerCase()}! +${K.meat} thịt`);
+    }
     S.villagers.forEach(v => v.morale = clamp(v.morale + 5, 0, 100));
-    SIM.event(`${names(fs)} đã hạ gục ${K.name.toLowerCase()}! Mang về ${K.meat} phần thịt, cả làng yên tâm hơn.`);
-    EV.emit('toast', `Đã hạ gục ${K.name.toLowerCase()}! +${K.meat} thịt`);
     for (const v of fs) {
       if (v.skills.guard < 5 && rand() < D.skillUpChance) { v.skills.guard++; SIM.log(`Kỹ năng Bảo vệ của ${v.name} tăng lên ${v.skills.guard}.`, 'ev'); }
-      if (ARMED.has(v.id) && S.res.spears > 0 && rand() < TL.breakFight) { S.res.spears--; SIM.log(`Giáo đá của ${v.name} bị gãy trong trận đánh.`); }
+      if (ARMED.has(v.id) && S.res.spears > 0 && rand() < TL.breakFight * (window.SAGA && SAGA.has('bronze') ? 0.5 : 1)) { S.res.spears--; SIM.log(`Giáo đá của ${v.name} bị gãy trong trận đánh.`); }
       for (const o of fs) if (o !== v) { v.bonds[o.id] = clamp((v.bonds[o.id] || 0) + 4, 0, 100); }
       v.task = null;
     }
@@ -365,6 +371,7 @@ const DEF = (() => {
         let mult = ARMED.has(v.id) ? D.spearMult : 1;
         if (towers().some(o => Math.hypot((o.x + 1) * T - b.x, (o.y + 1) * T - b.y) < D.towerRange * T)) mult *= D.towerBonus;
         if (b.warned) mult *= CFG.ROLES.warnedBonus;
+        if (window.SAGA) mult *= SAGA.fightMult();
         b.hp -= (D.baseDmg + D.perSkill * (v.skills.guard || 1)) * mult * dt;
         b.hit = 0.12;
         v.energy = clamp(v.energy - E.workDrain * 1.2 * dt, 0, 100);

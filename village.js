@@ -94,6 +94,7 @@ const VIL = (() => {
   // ---------------- BỮA TỐI NẤU CHÍN ----------------
   function afterMeal() {
     if (!S.vil || !kitchen() || S.vil.cookToday < KC.needHours || !S.today.eaten) return;
+    if (window.SAGA && SAGA.fireOut()) { SIM.log('Lửa đã tắt nên Nhà bếp không thể nấu chín bữa tối.'); return; }
     const save = Math.floor(S.today.eaten * KC.save);
     S.res.food = Math.min(SIM.cap('food'), S.res.food + save);
     S.today.eaten -= save;

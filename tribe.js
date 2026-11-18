@@ -30,7 +30,7 @@ const TRB = (() => {
   const popCap = () => info().cap;
   const radiusBonus = () => (level() - 1) * TR.radiusPerLevel;
   const fireSafeBonus = () => (level() - 1) * TR.fireSafePerLevel;
-  const lightMult = () => 1 + 0.12 * (level() - 1);
+  const lightMult = () => (window.SAGA && SAGA.fireOut()) ? 0.2 : 1 + 0.12 * (level() - 1);
   const roleOf = (v) => !S.roles ? null : v.id === S.roles.chief ? 'chief' : v.id === S.roles.prophet ? 'prophet' : v.id === S.roles.shaman ? 'shaman' : null;
   const reserved = (v) => { const r = roleOf(v); return r === 'prophet' || r === 'shaman'; };
   const isRole = (v) => !!roleOf(v);
@@ -41,7 +41,7 @@ const TRB = (() => {
   function fireCost() { const n = next(); return n ? { wood: n.wood, stone: n.stone, hours: n.hours } : { wood: 999, stone: 999, hours: 99 }; }
   function wantFire() {
     const n = next(), f = fire();
-    if (!n || f.upgrading || S.villagers.length < n.pop) return false;
+    if (!n || f.upgrading || S.villagers.length < n.pop || (window.SAGA && SAGA.fireOut())) return false;
     return level() === 1 || S.villagers.length >= popCap() - 4 || (S.res.wood >= n.wood + 10 && S.res.stone >= n.stone + 5);
   }
   function startFireUpgrade() {

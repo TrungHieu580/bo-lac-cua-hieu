@@ -15,6 +15,7 @@ const QST = (() => {
   }
   const best = (sk, list) => (list || S.villagers.filter(v => !v.child)).filter(v => (v.skills[sk] || 1) < 5).sort((a, b) => b.skills[sk] - a.skills[sk])[0];
   const guards = () => S.villagers.filter(v => v.job && v.job.type === 'guard');
+  const sg = (f) => (S.saga ? f(S.saga) : 0);
 
   // r: phần thưởng — wood, stone, food, seeds, spears, morale (cả làng), health (cả làng),
   //    skill: [kỹ năng, 'best' | 'guards'], buff: [hệ số, số ngày], newcomer, bless (ruộng lớn nhanh)
@@ -45,6 +46,17 @@ const QST = (() => {
     { id: 'stonering', t: 'Dựng Vòng đá thiêng',           cur: () => cnt('stonering'),         need: 1,   r: { seeds: 15, bless: 1, health: 15 } },
     { id: 'greathall', t: 'Hoàn thành Đại sảnh tù trưởng',  cur: () => cnt('greathall'),         need: 1,   r: { buff: [1.2, 5], morale: 20 } },
     { id: 'tribe5',    t: 'Đưa bộ lạc lên cấp 5',          cur: () => lvl(),                    need: 5,   r: { buff: [1.15, 5], morale: 20, health: 20 } },
+    { id: 'invent1',   t: 'Có phát minh đầu tiên',          cur: () => sg(g => Object.keys(g.inv).length), need: 1, r: { wood: 15, stone: 10 } },
+    { id: 'furs10',    t: 'Tích trữ 10 áo lông thú',        cur: () => sg(g => g.furs),          need: 10,  r: { food: 20, health: 10 } },
+    { id: 'winter1',   t: 'Vượt qua mùa đông đầu tiên',     cur: () => sg(g => g.winters),       need: 1,   r: { seeds: 10, morale: 10 } },
+    { id: 'dog1',      t: 'Thuần hóa chó săn đầu tiên',     cur: () => sg(g => g.dogs.length),   need: 1,   r: { skill: ['guard', 'guards'] } },
+    { id: 'mammoth1',  t: 'Săn được voi ma mút',            cur: () => sg(g => g.mammoths),      need: 1,   r: { spears: 4, morale: 10 } },
+    { id: 'explore2',  t: 'Hoàn thành 2 chuyến thám hiểm',  cur: () => sg(g => g.expCount),      need: 2,   r: { seeds: 10, stone: 25 } },
+    { id: 'trade3',    t: 'Trao đổi 3 lần với bộ lạc lân cận', cur: () => sg(g => g.nb.trades),  need: 3,   r: { food: 30, wood: 20 } },
+    { id: 'paint8',    t: 'Vẽ 8 bức tranh lên vách đá',      cur: () => sg(g => g.mem.filter(m => m.p).length), need: 8, r: { buff: [1.1, 3], morale: 8 } },
+    { id: 'horse1',    t: 'Thuần phục ngựa hoang',          cur: () => sg(g => g.horses),        need: 1,   r: { skill: ['hunt', 'best'], food: 20 } },
+    { id: 'era2',      t: 'Bước sang Thời đồ đá mới',        cur: () => sg(g => g.era),           need: 2,   r: { wood: 40, stone: 30 } },
+    { id: 'era3',      t: 'Bước sang Thời đồ đồng',          cur: () => sg(g => g.era),           need: 3,   r: { buff: [1.15, 5], morale: 15, health: 15 } },
   ];
   const SKN = () => CFG.SKILL_NAMES;
   function rewardText(r) {

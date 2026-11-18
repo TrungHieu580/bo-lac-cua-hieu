@@ -106,6 +106,7 @@ const RENDER = (() => {
     if (t.kind === 'work' || t.kind === 'hunting' || t.kind === 'fight' || t.kind === 'craft') return 'work';
     if (t.kind === 'cower' || t.kind === 'pray') return 'sit';
     if (t.kind === 'heal' || t.kind === 'healHouse' || t.kind === 'cook') return 'work';
+    if (window.SAGA && SAGA.WORK_POSE.includes(t.kind)) return 'work';
     if (t.kind === 'ritual') return 'walk';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
@@ -192,9 +193,12 @@ const RENDER = (() => {
         case 'boulder': list.push([foot, () => lx.drawImage(ART.SPR.boulder[o.v % 2], X, Y + T - 20)]); break;
         case 'fire': list.push([foot, () => {
           const fs = ART.SPR.fire[Math.floor(time * 8) % 3];
+          const out = window.SAGA && SAGA.fireOut();
           if (window.TRB) TRB.drawFireBack(lx, X, Y, time);
-          lx.drawImage(fs, X, Y - 2);
-          if (window.TRB) TRB.drawFireFront(lx, X, Y, time, fs);
+          if (out) SAGA.drawAsh(lx, X, Y, time);
+          else if (window.SAGA && S.saga && S.saga.fuel < 25) { lx.globalAlpha = 0.55; lx.drawImage(fs, X + 4, Y + 6, fs.width - 8, fs.height - 8); lx.globalAlpha = 1; }
+          else lx.drawImage(fs, X, Y - 2);
+          if (window.TRB) TRB.drawFireFront(lx, X, Y, time, out ? null : fs);
         }]); break;
         case 'hut': list.push([foot, () => lx.drawImage(ART.SPR.hut, X, Y + 2 * T - 52)]); break;
         case 'site': list.push([foot, () => {
@@ -229,6 +233,7 @@ const RENDER = (() => {
     }
     if (window.DEF) DEF.pushDraw(list, lx, L, Tp, time, shadow);
     if (window.VIL) VIL.pushDraw(list, lx, L, Tp, time, shadow);
+    if (window.SAGA) SAGA.pushDraw(list, lx, L, Tp, time, shadow);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 
@@ -253,7 +258,8 @@ const RENDER = (() => {
     }
 
     lighting(vw, vh, ox, oy);
-    if (S.weather === 'rain') rain(vw, vh);
+    if (S.weather === 'rain' && !(window.SAGA && SAGA.winter())) rain(vw, vh);
+    if (window.SAGA) SAGA.fx(lx, vw, vh, time);
 
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, cv.width, cv.height);
@@ -427,6 +433,7 @@ const RENDER = (() => {
       }
     }
     if (window.DEF) DEF.overlay(ctx, W, dpr, bar, time);
+    if (window.SAGA) SAGA.overlay(ctx, W, dpr, bar, time);
     // số bay lên
     for (let i = floats.length - 1; i >= 0; i--) {
       const f = floats[i];

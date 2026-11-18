@@ -108,6 +108,7 @@ window.CFG = {
     // Công trình đồ sộ: mở theo cấp bộ lạc, tốn nhiều vật liệu và nhiều ngày công
     temple:    { name: 'Đền tổ tiên',        w: 4, h: 3, wood: 80,  stone: 120, hours: 40, unlock: 0, tribe: 3, max: 1, grand: true },
     stonering: { name: 'Vòng đá thiêng',     w: 4, h: 4, wood: 40,  stone: 200, hours: 55, unlock: 0, tribe: 4, max: 1, grand: true },
+    paintwall: { name: 'Vách đá vẽ tranh', w: 3, h: 2, wood: 4,  stone: 15, hours: 8,  unlock: 8, max: 1 },
     greathall: { name: 'Đại sảnh tù trưởng', w: 5, h: 3, wood: 200, stone: 150, hours: 70, unlock: 0, tribe: 5, max: 1, grand: true, beds: 12 },
   },
 
@@ -131,6 +132,14 @@ window.CFG = {
   KITCHEN: { needHours: 2, maxHours: 3, save: 0.25, health: 3, morale: 3 }, // bếp nấu đủ 2 giờ/ngày: bữa tối tiết kiệm 25% thức ăn, +3 sức khỏe, +3 tinh thần
   PEN: { start: 2, cap: 6, breed: 0.35, escape: 0.25, milkPer: 2, meat: 6, capture: 0.3, herdHours: 1 },
   GRAND: { templeMorale: 5, templeNewcomer: 0.15, ringGrow: 0.3, ringMorale: 3, hallWork: 0.05 },
+  // ---- Saga: giữ lửa, mùa, voi ma mút, thám hiểm, thú nuôi, phát minh, bộ lạc lân cận, tranh hang ----
+  FIRE: { burn: 2.2, night: 24, rainMult: 1.4, winterMult: 1.6, stokeAt: 55, stokeWood: 3, stokeFuel: 30, stormChance: 0.3, storm: 35, kindleHours: 2, kindleWood: 2, kindleChance: 0.45 },
+  SEASONS: { len: 3, names: ['Xuân', 'Hạ', 'Thu', 'Đông'], cold: 6, furCap: 60 },
+  MAMMOTH: { chance: 0.3, minDay: 5, minHunters: 5, hours: 2, meat: 40, furs: 6, base: 0.3, perHunter: 0.06, spear: 0.03, injury: 0.4, dmg: [12, 30] },
+  EXPEDITION: { days: 2, min: 2, max: 3, autoEvery: 7, autoPop: 12, risk: 0.25 },
+  PETS: { pupChance: 0.35, growDays: 4, maxDogs: 4, dogFight: 1.4, dogHunt: 0.08, horseChance: 0.25, horseLevel: 2, tameHours: 3, tameChance: 0.5, horseHunt: 0.08, maxHorses: 3 },
+  INVENT: { perAdults: 5 },
+  NEIGHBOR: { name: 'Bộ lạc Đá Đỏ', start: 40, meetDay: 6, visitChance: 0.3, raidBelow: 25, giftFood: 20, giftRel: 12, tradeRel: 5, allyAt: 75 },
   CARE: { healRate: 10, patients: 4, goAt: 45, shamanBonus: 8 }, // Nhà chữa bệnh: người sức khỏe dưới 45 vào nằm chữa, hồi 10/giờ (+8 khi có vu sư chăm)
   GATHER_RATIO: 1.3,       // tỉ lệ gỗ : đá mà làng cố giữ khi đi khai thác
 
@@ -159,6 +168,7 @@ window.CFG = {
     wolf:  { name: 'Sói', hp: 10, dmg: 7,  speed: 25, meat: 4,  minDay: 3,  weight: 5, target: 'people' },
     bear:  { name: 'Gấu', hp: 24, dmg: 11, speed: 15, meat: 10, minDay: 7,  weight: 3, target: 'food', steal: 5, bold: true },
     tiger: { name: 'Hổ',  hp: 26, dmg: 15, speed: 23, meat: 8,  minDay: 12, weight: 2, target: 'people' },
+    raider: { name: 'Kẻ đột kích', hp: 14, dmg: 8, speed: 21, meat: 0, minDay: 9999, weight: 0, target: 'food', steal: 8, bold: true, raid: true },
   },
   NAMES: ['Sông', 'Núi', 'Lá', 'Hoa', 'Trăng', 'Sao', 'Cỏ', 'Suối', 'Rêu', 'Mưa', 'Bão', 'Lửa', 'Ong', 'Sóc', 'Cò', 'Én', 'Tre', 'Mận',
     'Đào', 'Lúa', 'Mầm', 'Khói', 'Thác', 'Hạt', 'Gấu', 'Nai', 'Bông', 'Cát', 'Rừng', 'Đồi', 'Nắng', 'Hồ', 'Sen', 'Cúc', 'Vàng', 'Mai'],

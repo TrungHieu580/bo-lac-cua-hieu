@@ -197,3 +197,27 @@ img.bi { width: 22px; height: 22px; }
 }
 
 @media (max-width: 700px) { #buildhint { top: auto; bottom: 8px; left: 8px; right: 8px; max-width: none; justify-content: space-between; } }
+/* ---- Saga: mùa, lửa, phát minh, ký ức ---- */
+.saga-chip { display: inline-flex; align-items: center; gap: 3px; background: rgba(90,160,60,.28); padding: 2px 6px; border-radius: 5px; white-space: nowrap; margin-left: 4px; }
+.saga-chip.winter { background: rgba(150,200,255,.35); }
+.res.low { background: rgba(220,150,40,.45); }
+.mem-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 260px; overflow-y: auto; }
+.mem { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.mem img { width: 39px; height: 33px; image-rendering: pixelated; border-radius: 3px; flex: none; }
+.mem.raw img { opacity: .45; filter: grayscale(.6); }
+.mem small { opacity: .7; }
+.inv-era { margin-top: 8px; }
+.inv-era.locked { opacity: .55; }
+.inv { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+.inv small { display: block; opacity: .75; font-size: 12px; }
+.inv .btn { white-space: nowrap; flex: none; }
+.inv-done { color: #9be067; white-space: nowrap; }
+.inv-cur { color: #f2c94c; white-space: nowrap; font-size: 12px; }
+@media (max-width: 700px) { .saga-chip b { font-size: 12px; } }
+@media (max-width: 480px) {
+  .tb-res { flex-wrap: wrap; justify-content: center; row-gap: 3px; gap: 4px; }
+  .res small { display: none; }
+  .res { padding: 1px 3px; gap: 2px; }
+}
+#t-day { white-space: nowrap; }
+@media (max-width: 480px) { .saga-chip .sn { display: none; } .saga-chip { margin-left: 0; padding: 2px 4px; } }

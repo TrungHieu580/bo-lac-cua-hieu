@@ -54,6 +54,7 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 | `render.js` | Camera, vẽ theo bội số nguyên, sắp lớp theo tọa độ chân, ánh sáng ngày đêm, mưa |
 | `ui.js` | Thanh trên và thanh dưới, bảng dân làng, xây dựng, nhật ký, bảng hành động, modal |
 | `main.js` | Vòng lặp game, điều khiển chuột, cảm ứng, bàn phím, tự lưu |
+| `saga.js` | Giữ lửa, bốn mùa, voi ma mút, thám hiểm, chó & ngựa, phát minh & thời đại, bộ lạc lân cận, tranh hang |
 
 ## Đã kiểm tra
 
@@ -92,6 +93,20 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Mở khóa theo dân số:** 7 người — Giàn phơi thịt; 8 — Câu cá (bến cá dọc bờ sông, mỗi đêm cá hồi lại); 9 — Kho lương; 10 — Nhà dài và Lễ hội lửa trại mỗi 7 ngày (tốn thức ăn, tăng mạnh tinh thần và gắn kết); 12 — Lều thảo dược (mọi người hồi thêm sức khỏe mỗi đêm); 14 — Xưởng chế tác (xây dựng, đốn gỗ, nhặt đá nhanh hơn 20%). Dân số tối đa 40.
 - Bản lưu cũ vẫn chơi tiếp được trên bản đồ cũ 36×28 với đầy đủ tính năng mới; chọn **Chơi mới** để có bản đồ lớn.
 
+## Cảm hứng từ phim & truyện (Quest for Fire, Alpha, Earth's Children, The Croods, Origins)
+
+Tất cả nằm trong `saga.js`, thông số trong `config.js` (FIRE, SEASONS, MAMMOTH, EXPEDITION, PETS, INVENT, NEIGHBOR).
+
+- **Giữ lửa** *(Quest for Fire)*: lửa trại có lượng củi (🔥 % trên thanh trên), cháy nhanh hơn khi mưa, mùa đông và khi lửa lớn. Mưa bão ban đêm có thể dập bớt lửa. Làng tự cử người thêm củi (3 gỗ → +30%) khi lửa yếu và trước khi trời tối, và để dành gỗ cho lửa. Lửa tắt: thú dữ hết sợ, Nhà bếp không nấu được, ban đêm mọi người lạnh và buồn; phải **Nhóm lại lửa** (cọ que, có thể phải thử nhiều lần) hoặc **Xin lửa** bộ lạc lân cận.
+- **Bốn mùa & mùa đông băng hà** *(Earth's Children)*: Xuân – Hạ – Thu – Đông, mỗi mùa 3 ngày. Mùa đông tuyết rơi, bụi quả không ra trái, ruộng lớn chậm, thú ở đồng cỏ sinh sôi chậm, lửa ngốn củi. Ai không có **áo lông thú** bị rét mỗi đêm. Áo lông có được khi săn thành công, hạ thú dữ, săn voi ma mút, đổi với bộ lạc lân cận; qua mỗi mùa đông một phần áo sờn rách.
+- **Săn voi ma mút theo nhóm**: thỉnh thoảng (nhiều hơn vào thu, đông) một đàn voi ma mút đi qua đồng cỏ, ở lại 2 ngày. Cần ít nhất 5 thợ săn (3 nếu có đồng minh): cả nhóm tập hợp quanh đàn voi rồi vây đánh 2 giờ. Thành công: 40 thịt + 6 áo lông, ghi vào ký ức. Rủi ro bị thương cao; giáo, chó, ngựa, cung tên giúp tăng tỷ lệ.
+- **Thám hiểm vùng đất mới** *(The Croods)*: chạm lửa trại → chọn 2–3 người. Đoàn đi ra bìa bản đồ, rời làng 2 ngày (1 ngày nếu có ngựa), rồi trở về với: mỏ đá lửa, hạt giống lạ, áo lông, ý tưởng mới, người mới, sói con, gặp bộ lạc khác, ngựa hoang… hoặc gặp hổ răng kiếm. Làng tự cử đoàn mỗi 7 ngày khi đủ 12 dân.
+- **Thuần hóa sói và ngựa** *(Alpha)*: hạ sói có 35% tìm được sói con; sau 4 ngày nó thành chó săn (tối đa 4). Chó đi theo người canh gác, lao vào thú dữ, sủa báo động (thú bị phát hiện sớm), giúp đi săn. Từ bộ lạc cấp 2, ngựa hoang xuất hiện ở đồng cỏ → **Thuần ngựa** (3 giờ công); ngựa sống trong chuồng thú, giúp săn và thám hiểm nhanh hơn.
+- **Phát minh và thời đại** *(Origins)*: mỗi đêm có ý tưởng (theo dân số, xưởng, tiên tri, vách tranh). 11 phát minh qua 3 thời đại — Đồ đá cũ: Bẫy thú, Que khoan lửa, Kim xương & áo da, Rìu đá; Đồ đá mới (3 phát minh + bộ lạc cấp 2): Đồ gốm, Cung tên, Liềm đá, Giày da; Đồ đồng (3 phát minh + bộ lạc cấp 4): Luyện đồng, Bánh xe, Lịch mùa vụ. Chọn nghiên cứu ở bảng Tự động.
+- **Bộ lạc lân cận — Bộ lạc Đá Đỏ**: gặp từ ngày 6 hoặc qua thám hiểm. Họ tới thăm với một đề nghị trao đổi: **Đổi**, **Tặng quà** hay **Đuổi đi**. Quan hệ ≥ 75 thì kết minh (gửi quà, cho lửa, góp người săn voi, có người về làm dâu rể); dưới 25 thì họ kéo tới đột kích kho lương (đánh lui như thú dữ). Đôi khi có tranh chấp làm quan hệ xấu đi. Khi bật Tự động, làng tự trao đổi hoặc tặng quà nếu dư dả.
+- **Tranh hang & ký ức bộ lạc**: các sự kiện lớn (lửa lên cấp, em bé đầu tiên, voi ma mút, chó đầu tiên, phát minh, thời đại mới, kết minh, vượt mùa đông…) được ghi thành ký ức. Xây **Vách đá vẽ tranh** (8 dân) để dân làng vẽ ký ức lên đá bằng đất son — mỗi bức +1 ý tưởng, cả làng vui hơn; chạm vào vách để xem lịch sử bộ lạc.
+- Thêm 12 nhiệm vụ mới (phát minh, áo lông, mùa đông, chó, voi ma mút, thám hiểm, trao đổi, tranh, ngựa, thời đại).
+
 ## Mở rộng sau bản đầu
 
-Mùa khô và mùa mưa, đánh cá, thuần dưỡng thú, chế tác, truyền nghề và trao đổi với bộ lạc lân cận.
+Truyền nghề, đánh cá bằng thuyền, các bộ lạc khác, lễ hội theo mùa.

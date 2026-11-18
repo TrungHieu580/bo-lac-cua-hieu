@@ -4,7 +4,7 @@
 'use strict';
 const LAY = (() => {
   const T = CFG.TILE;
-  const MOVABLE = ['storage', 'hut', 'longhouse', 'rack', 'granary', 'healer', 'workshop', 'watchtower', 'sickhouse', 'kitchen', 'pen', 'temple', 'stonering', 'greathall', 'site'];
+  const MOVABLE = ['storage', 'hut', 'longhouse', 'rack', 'granary', 'healer', 'workshop', 'watchtower', 'sickhouse', 'kitchen', 'pen', 'temple', 'stonering', 'greathall', 'paintwall', 'site'];
   const kindOf = (o) => o.type === 'site' ? (o.kind || 'hut') : o.type;
   function nameOf(o) {
     if (o.type === 'storage') return 'Kho chung';

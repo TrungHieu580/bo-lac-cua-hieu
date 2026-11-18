@@ -27,7 +27,7 @@ const UI = (() => {
   // ---------------- THANH TRÊN ----------------
   function buildTop() {
     $('#top').innerHTML = `
-      <div class="tb-time"><b id="t-day">Ngày 1</b><span id="t-clock">06:00</span><span id="t-weather"></span><span class="fc" title="Dự báo ngày mai">Mai <span id="t-fc"></span></span>${window.TRB ? TRB.topHTML() : ''}</div>
+      <div class="tb-time"><b id="t-day">Ngày 1</b><span id="t-clock">06:00</span><span id="t-weather"></span><span class="fc" title="Dự báo ngày mai">Mai <span id="t-fc"></span></span>${window.TRB ? TRB.topHTML() : ''}${window.SAGA ? SAGA.topHTML() : ''}</div>
       <div class="tb-res">
         <span class="res" title="Dân số">${ic('people')}<b id="r-pop">6</b></span>
         <span class="res" title="Thức ăn (số ngày còn đủ)">${ic('food')}<b id="r-food">0</b><small id="r-days"></small></span>
@@ -35,6 +35,7 @@ const UI = (() => {
         <span class="res" title="Đá">${ic('stone')}<b id="r-stone">0</b></span>
         <span class="res" title="Hạt giống">${ic('seeds')}<b id="r-seeds">0</b></span>
         <span class="res" title="Giáo đá — dụng cụ săn bắn và đánh thú dữ">${ic('spear')}<b id="r-spear">0</b></span>
+        ${window.SAGA ? SAGA.resHTML() : ''}
       </div>`;
   }
   function updateTop() {
@@ -53,6 +54,7 @@ const UI = (() => {
     $('#r-stone').textContent = S.res.stone;
     $('#r-seeds').textContent = S.res.seeds;
     if (window.TRB) TRB.updateTop();
+    if (window.SAGA) SAGA.updateTop();
     const rs = $('#r-spear'); if (rs) { rs.textContent = S.res.spears || 0; rs.parentNode.classList.toggle('alarm', !!(S.beasts && S.beasts.some(b => b.state !== 'flee'))); }
     const pb = $('#b-pause');
     pb.innerHTML = state.paused ? `<span class="bi">▶</span><span>Tiếp tục</span>` : `<span class="bi">❚❚</span><span>Tạm dừng</span>`;
@@ -310,6 +312,7 @@ const UI = (() => {
         out.actions.push({ spec: { type: 'rest' }, label: 'Nghỉ bên lửa', detail: `Hồi ${CFG.ENERGY.restRegen} năng lượng/giờ, nghỉ tới khi gần đầy.` });
         if (window.DEF) DEF.fireActions(out, n);
         if (window.TRB) TRB.fireActions(out, n);
+        if (window.SAGA) SAGA.fireActions(out, n);
         break;
       }
       case 'huntzone': {
@@ -343,7 +346,7 @@ const UI = (() => {
     const chips = S.villagers.map(v => `<button class="chip ${state.selected.has(v.id) ? 'on' : ''}" data-id="${v.id}"><img src="${pv(v)}"><span>${v.name}</span><small>${window.TRB ? TRB.title(v) : CFG.SKILL_NAMES[v.main]}</small></button>`).join('');
     const acts = info.actions.map((a, i) => {
       const c = SIM.check(a.spec, vs);
-      let extra = '';
+      let extra = a.est ? a.est(vs) : '';
       if (a.hunt) {
         const e = SIM.huntEstimate(vs, WORLD.byId(a.spec.target));
         extra = vs.length ? `<div class="est">Với ${vs.length} người: thành công ~<b>${Math.round(e.chance * 100)}%</b> · sản lượng dự kiến <b>${e.min}–${e.max}</b> thịt · rủi ro: <b class="risk-${e.risk}">${e.risk}</b>${S.weather === 'rain' ? ' (mưa làm giảm cơ hội)' : ''}</div>` : `<div class="est">Chọn người để xem tỷ lệ thành công, sản lượng và rủi ro.</div>`;
@@ -499,6 +502,14 @@ const UI = (() => {
         <li><b>Di chuyển công trình:</b> chạm vào lều, kho, chuồng, đền... → <b>Di chuyển</b>, rồi chạm chỗ mới và bấm <b>Chuyển</b> (miễn phí, chuyển ngay). Nút <b>Lưới: Bật/Tắt</b> để hít vào lưới cho thẳng hàng hoặc đặt tự do (máy tính: giữ Shift khi chạm).</li>
         <li><b>Xây dựng:</b> khi chọn vị trí, các ô gạch đứt là chỗ trống theo lưới — lều tự hít vào ô gần nhất để các dãy lều thẳng hàng; ruộng mới cũng mở thẳng hàng với ruộng cũ.</li>
         <li><b>Thú dữ</b> (sói, gấu, hổ) có thể tới ban ngày. Chạm vào bếp lửa → <b>Canh gác làng</b> để cử người giỏi Bảo vệ, và <b>Chế giáo đá</b> (2 gỗ + 1 đá) — người cầm giáo đánh mạnh hơn, đi săn cũng tốt hơn. Dân thường tự chạy về bếp lửa vì thú sợ lửa (trừ gấu — gấu nhắm vào kho thức ăn).</li>
+        <li><b>Giữ lửa:</b> lửa trại cần củi (chỉ số 🔥 trên thanh trên). Mưa bão, mùa đông làm lửa cháy nhanh; hết củi lửa sẽ tắt — thú dữ hết sợ, không nấu được ăn. Làng tự cử người thêm củi; nếu tắt, chạm lửa trại → <b>Nhóm lại lửa</b> hoặc <b>Xin lửa</b> bộ lạc lân cận.</li>
+        <li><b>Bốn mùa:</b> mỗi mùa ${CFG.SEASONS.len} ngày. Mùa đông bụi quả không ra trái, ruộng lớn chậm, ai thiếu <b>áo lông thú</b> bị rét mỗi đêm — hãy đi săn để có da, tích trữ thức ăn và củi từ mùa thu.</li>
+        <li><b>Voi ma mút:</b> thỉnh thoảng một đàn đi qua đồng cỏ. Chạm vào chúng → <b>Săn voi ma mút</b> với ít nhất ${CFG.MAMMOTH.minHunters} thợ săn mang giáo: rất nhiều thịt và da, nhưng dễ bị thương.</li>
+        <li><b>Thám hiểm:</b> chạm lửa trại → <b>Thám hiểm vùng đất mới</b>, chọn 2–3 người. Họ đi vài ngày và mang về đá quý, hạt giống lạ, người mới, sói con… hoặc gặp nguy hiểm.</li>
+        <li><b>Thú nuôi:</b> hạ sói có thể nhặt được sói con — vài ngày sau thành chó săn (sủa báo thú dữ, giúp đánh và đi săn). Từ bộ lạc cấp 2 có ngựa hoang ở đồng cỏ → <b>Thuần ngựa</b>.</li>
+        <li><b>Phát minh:</b> mỗi đêm bộ lạc có thêm ý tưởng để nghiên cứu (bẫy thú, áo da, cung tên, đồ gốm, luyện đồng…), đi qua 3 thời đại: Đồ đá cũ → Đồ đá mới → Đồ đồng. Chọn phát minh ở bảng <b>Tự động</b>.</li>
+        <li><b>${CFG.NEIGHBOR.name}:</b> bộ lạc lân cận tới trao đổi — chạm vào họ để <b>Đổi</b>, <b>Tặng quà</b> hay <b>Đuổi đi</b>. Thân thiết thì kết minh (giúp săn voi, cho lửa, gửi quà); thù địch thì họ kéo tới cướp kho.</li>
+        <li><b>Vách đá vẽ tranh</b> (${CFG.BUILDINGS.paintwall.unlock} dân): những sự kiện lớn trở thành ký ức của bộ lạc; người dân vẽ chúng lên vách đá — chạm vào vách để xem lại lịch sử.</li>
         <li><b>Camera:</b> kéo để di chuyển, cuộn chuột / chụm hai ngón để phóng to. Phím: WASD/mũi tên, Space tạm dừng, 1-2-3 tốc độ, B xây dựng, V dân làng, J nhật ký, Esc đóng.</li>
       </ol>
       <h4>Mục tiêu đến hết ngày ${CFG.GOAL.day}</h4>

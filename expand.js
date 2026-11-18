@@ -13,7 +13,7 @@ const EXP = (() => {
   const pick = (a) => a[Math.floor(rand() * a.length)];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const SK = CFG.SKILL_NAMES;
-  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop', 'watchtower', 'sickhouse', 'kitchen', 'pen', 'temple', 'stonering', 'greathall'];
+  const BUILD_TYPES = ['fire', 'storage', 'hut', 'site', 'rack', 'granary', 'longhouse', 'healer', 'workshop', 'watchtower', 'sickhouse', 'kitchen', 'pen', 'temple', 'stonering', 'greathall', 'paintwall'];
   const DESC = {
     hut: `Chỗ ngủ cho ${CFG.HUT.sleepers} người, hồi phục tốt hơn.`,
     rack: `+${B.rack.foodCap} sức chứa thức ăn, thịt săn được +${Math.round(B.rack.meatBonus * 100)}%.`,
@@ -30,12 +30,12 @@ const EXP = (() => {
   const adults = () => S.villagers.filter(v => !v.child);
   function coupleCount() { return S.villagers.filter(v => !v.child && v.partner && v.sex === 'f' && SIM.vById(v.partner)).length; }
   function beds() { return count('hut') * CFG.HUT.sleepers + count('longhouse') * B.longhouse.beds + count('greathall') * B.greathall.beds; }
-  function foodCapBonus() { return count('rack') * B.rack.foodCap + count('granary') * B.granary.foodCap; }
+  function foodCapBonus() { return count('rack') * B.rack.foodCap + count('granary') * B.granary.foodCap + (window.SAGA && S.saga ? SAGA.capBonus() : 0); }
   function meatMult() { return 1 + Math.min(2, count('rack')) * B.rack.meatBonus; }
   function buildRadius() { return CFG.BUILD_RADIUS + Math.max(0, Math.floor((S.villagers.length - 6) / 2)) + (window.TRB ? TRB.radiusBonus() : 0); }
   const popLimit = () => Math.min(CFG.POP.max, window.TRB ? TRB.popCap() : CFG.POP.max);
   function bname(k) { return (B[k] && B[k].name) || 'Công trình'; }
-  function bdesc(k) { return DESC[k] || (window.VIL && VIL.DESC[k]) || ''; }
+  function bdesc(k) { return DESC[k] || (window.VIL && VIL.DESC[k]) || (window.SAGA && SAGA.DESC[k]) || ''; }
   function unlocked(k) { return S.villagers.length >= (B[k].unlock || 0) && (!B[k].tribe || (window.TRB && TRB.level() >= B[k].tribe)); }
   function lockMsg(k) { const b = B[k]; return b.tribe && !(window.TRB && TRB.level() >= b.tribe) ? `Mở khóa khi bộ lạc đạt cấp ${b.tribe}` : `Mở khóa khi dân số đạt ${b.unlock} (hiện ${S.villagers.length})`; }
   function popText() { return `${S.villagers.length}/${beds()}`; }
@@ -60,6 +60,7 @@ const EXP = (() => {
     if (window.TRB) TRB.migrate(s);
     if (window.QST) QST.migrate(s);
     if (window.VIL) VIL.migrate(s);
+    if (window.SAGA) SAGA.migrate(s);
   }
 
   // ---------------- SPRITE MỚI ----------------
@@ -141,7 +142,7 @@ const EXP = (() => {
     }
     return SP;
   }
-  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'storage') return ART.SPR.storage; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; if (k === 'sickhouse' && window.TRB) return TRB.SPR.sickhouse; if (window.VIL && VIL.SPR[k] && k !== 'goat') return VIL.SPR[k]; return sprites()[k] || ART.SPR.hut; }
+  function spriteFor(k) { if (k === 'hut' || !k) return ART.SPR.hut; if (k === 'storage') return ART.SPR.storage; if (k === 'watchtower' && window.DEF) return DEF.SPR.watchtower; if (k === 'sickhouse' && window.TRB) return TRB.SPR.sickhouse; if (window.VIL && VIL.SPR[k] && k !== 'goat') return VIL.SPR[k]; if (window.SAGA && k === 'paintwall') return SAGA.SPR.paintwall; return sprites()[k] || ART.SPR.hut; }
 
   function drawObj(o, X, Y, lx) {
     const sp = sprites();
@@ -149,6 +150,7 @@ const EXP = (() => {
     if (o.type === 'fishspot') return () => drawFishspot(o, X, Y, lx);
     if (window.TRB) { const d = TRB.drawObj(o, X, Y, lx); if (d) return d; }
     if (window.VIL) { const d = VIL.drawObj(o, X, Y, lx); if (d) return d; }
+    if (window.SAGA) { const d = SAGA.drawObj(o, X, Y, lx); if (d) return d; }
     if (o.type === 'watchtower' && window.DEF) { const s = DEF.SPR.watchtower; return () => lx.drawImage(s, X, Y + o.h * T - s.height + 2); }
     if (sp[o.type] && (o.type === 'rack' || o.type === 'granary' || o.type === 'longhouse' || o.type === 'healer' || o.type === 'workshop')) {
       const s = sp[o.type];
@@ -545,13 +547,14 @@ const EXP = (() => {
       else if (unlocked('healer') && count('healer') < 1) want = 'healer';
       else if (unlocked('workshop') && count('workshop') < 1) want = 'workshop';
       else if (unlocked('kitchen') && count('kitchen') < 1) want = 'kitchen';
+      else if (unlocked('paintwall') && count('paintwall') < 1 && S.saga && S.saga.mem.length >= 2) { want = 'paintwall'; S.planNote = 'Dựng vách đá để vẽ lại ký ức của bộ lạc'; }
       else if (unlocked('pen') && count('pen') < (pop >= 24 ? 3 : pop >= 15 ? 2 : 1)) want = 'pen';
       else { for (const g of ['temple', 'stonering', 'greathall']) if (unlocked(g) && count(g) < 1 && !S.objects.some(o => o.type === 'site' && o.kind === g)) { want = g; S.planNote = `Cả làng góp sức cho công trình đồ sộ: ${bname(g)}`; break; } }
     }
     if (want) {
       const c = costOf(want);
       const name = want === 'upgrade' ? 'nâng cấp kho' : want === 'fire' ? 'nâng cấp lửa trại' : bname(want);
-      if (S.res.wood >= c.wood && S.res.stone >= c.stone) {
+      if (S.res.wood >= c.wood + (window.SAGA ? SAGA.woodReserve() : 0) && S.res.stone >= c.stone) {
         if (want === 'fire') { TRB.startFireUpgrade(); want = null; }
         else if (want === 'upgrade') {
           S.res.wood -= c.wood; S.res.stone -= c.stone;
@@ -650,6 +653,7 @@ const EXP = (() => {
     if (window.DEF) DEF.autoGuards();
     if (window.TRB) TRB.autoRoles();
     if (window.VIL) VIL.autoJobs();
+    if (window.SAGA) SAGA.autoJobs();
     const idle = S.villagers.filter(v => !v.child && !v.job && !v.resting && !(window.TRB && TRB.reserved(v)));
     if (!idle.length) return;
     const ctx = context();
@@ -684,7 +688,7 @@ const EXP = (() => {
     return `${base} ${k}`;
   }
   function addVillager(v, tile) {
-    v.id = Math.max(0, ...S.villagers.map(x => x.id)) + 1;
+    v.id = Math.max(0, ...S.villagers.map(x => x.id), ...(window.SAGA ? SAGA.awayIds() : [])) + 1;
     [v.x, v.y] = [tile[0] * T + T / 2, tile[1] * T + T * 0.75];
     Object.assign(v, { facing: 0, bonds: {}, job: null, carry: null, resting: false, restKind: '', restReason: '', note: '', fedToday: true, task: null });
     for (const o of S.villagers) { const b = v._bonds && v._bonds[o.id] !== undefined ? v._bonds[o.id] : 30 + Math.floor(rand() * 15); v.bonds[o.id] = b; o.bonds[v.id] = b; }
@@ -856,6 +860,7 @@ const EXP = (() => {
     if (window.TRB) m *= TRB.workMult(v, skill);
     if (window.QST) m *= QST.workMult();
     if (window.VIL) m *= VIL.workMult();
+    if (window.SAGA && S.saga) m *= SAGA.workMult(v, skill);
     return m;
   }
   function chatPair(a, b) {
@@ -876,6 +881,7 @@ const EXP = (() => {
     return parts.join(' · ');
   }
   function objActions(o) {
+    if (window.SAGA) { const r = SAGA.objActions(o); if (r) return r; }
     if (window.TRB) { const r = TRB.objActions(o); if (r) return r; }
     if (window.VIL) { const r = VIL.objActions(o); if (r) return r; }
     if (o.type === 'fishspot') {
@@ -944,6 +950,7 @@ const EXP = (() => {
       ${window.QST ? QST.panelHTML() : ''}
       ${window.TRB ? TRB.panelHTML() : ''}
       ${window.VIL ? VIL.panelHTML() : ''}
+      ${window.SAGA ? SAGA.panelHTML() : ''}
       ${window.DEF ? DEF.panelHTML() : ''}
       <div class="jsec"><h4>Mở khóa theo dân số</h4><div id="ex-unlock" class="sheet-sub"></div></div>`;
   }
@@ -977,6 +984,7 @@ const EXP = (() => {
     if (window.TRB) TRB.updatePanel(p);
     if (window.QST) QST.updatePanel(p);
     if (window.VIL) VIL.updatePanel(p);
+    if (window.SAGA) SAGA.updatePanel(p);
     const un = p.querySelector('#ex-unlock');
     if (un) {
       const htmlUn = UNLOCKS().map(([need, name]) => row(pop >= need, `${need} người: ${name}`)).join('');
