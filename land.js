@@ -8,7 +8,7 @@
 'use strict';
 const LAND = (() => {
   const T = CFG.TILE;
-  const SIZES = [[48, 36], [56, 42], [64, 48], [72, 54], [80, 60]];
+  const SIZES = [[48, 36], [56, 42], [64, 48], [72, 54], [80, 60], [96, 72], [112, 84], [128, 96]];
   const BR = { wood: 4, stone: 1, hours: 1.5, maxLen: 7 }; // chi phí mỗi ô cầu
   const rand = () => Math.random();
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));

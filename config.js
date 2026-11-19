@@ -87,7 +87,7 @@ window.CFG = {
 
   // ---- Tự động & phát triển ----
   AUTO: { interval: 0.25, defaultOn: true },     // bộ lập kế hoạch chạy mỗi 0.25 giờ game
-  POP: { childDays: 4, newcomerChance: 0.5, smallBonus: 0.2, coupleChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 40 },
+  POP: { childDays: 4, newcomerChance: 0.5, smallBonus: 0.2, coupleChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 200 },
   REGROW: { saplingChance: 0.3, saplingDays: 3, boulderChance: 0.75, boulderMaxExtra: 10 },
   NEW_PLOT_RADIUS: 16,
   FAMILY: { coupleBond: 50, pregnancyDays: 3, pregnancyChance: 0.55, birthGapDays: 3, pregnantWork: 0.7 }, // chỉ có thể mang thai khi vợ chồng ngủ chung một lều riêng
@@ -116,6 +116,8 @@ window.CFG = {
     school:    { name: 'Trường dạy nghề',  w: 3, h: 2, wood: 18, stone: 14, hours: 14, unlock: 14, max: 1 },
     barracks:  { name: 'Doanh trại',       w: 4, h: 3, wood: 26, stone: 22, hours: 20, unlock: 16, max: 2 },
     smelter:   { name: 'Lò luyện',         w: 2, h: 2, wood: 10, stone: 24, hours: 12, unlock: 0, max: 1, invent: 'smelting' },
+    gate:      { name: 'Cổng làng',      w: 3, h: 2, wood: 30, stone: 24, hours: 14, unlock: 0, tribe: 4, max: 1 },
+    clanhouse: { name: 'Nhà sàn lớn',   w: 4, h: 3, wood: 40, stone: 24, hours: 22, unlock: 0, tribe: 6, max: 14, beds: 16, rooms: 4 },
     greathall: { name: 'Đại sảnh tù trưởng', w: 5, h: 3, wood: 200, stone: 150, hours: 70, unlock: 0, tribe: 5, max: 1, grand: true, beds: 12 },
   },
 
@@ -125,8 +127,11 @@ window.CFG = {
       { name: 'Bếp lửa',          pop: 0,  cap: 14 },
       { name: 'Lửa trại',         pop: 6,  cap: 22, wood: 15, stone: 10, hours: 10 },
       { name: 'Đống lửa lớn',     pop: 12, cap: 30, wood: 30, stone: 24, hours: 14 },
-      { name: 'Lửa thiêng',       pop: 18, cap: 36, wood: 45, stone: 40, hours: 18 },
-      { name: 'Ngọn lửa tổ tiên', pop: 26, cap: 40, wood: 60, stone: 60, hours: 22 },
+      { name: 'Lửa thiêng',       pop: 18, cap: 40, wood: 45, stone: 40, hours: 18 },
+      { name: 'Ngọn lửa tổ tiên', pop: 30, cap: 50, wood: 60, stone: 60, hours: 22 },
+      { name: 'Hỏa đàn liên minh', pop: 42, cap: 70, wood: 100, stone: 110, hours: 28 },
+      { name: 'Đuốc thiêng vương quyền', pop: 60, cap: 100, wood: 150, stone: 170, hours: 34 },
+      { name: 'Ngọn lửa vĩnh cửu', pop: 88, cap: 140, wood: 210, stone: 240, hours: 40 },
     ],
     radiusPerLevel: 2,     // bán kính xây dựng +2 ô mỗi cấp
     moralePerLevel: 1,     // mỗi đêm tinh thần +1 mỗi cấp trên 1
@@ -152,15 +157,39 @@ window.CFG = {
     tier2: { pop: 12, level: 2 }, tier3: { pop: 22, level: 4, invent: 'masonry' },
     wellServes: 12, roadSpeed: 1.3, paveStone: 1,
     studyIdeas: 0.3, smeltHours: 1.5, skillMax: 7,
-    soldiersPer: 7, barracksCap: [0, 6, 10, 14], drillXp: 1,
-    lawSlots: [1, 1, 2, 2, 3],
+    soldiersPer: 7, barracksCap: [0, 6, 10, 16], drillXp: 1,
+    lawSlots: [1, 1, 2, 2, 3, 3, 4, 4],
     // Thịnh vượng: ở cấp bộ lạc 5, giới hạn dân số được cộng thêm
-    prosper: { hall: 5, living: 5, on: 0.85, off: 0.7 },
+    prosper: { hall: 10, living: 10, on: 0.85, off: 0.7 },
     // Đoàn buôn: thừa thức ăn/gỗ/đá (≥ 85% kho) thì mang bớt đi đổi lấy thứ làng đang thiếu
     caravan: { pop: 12, surplus: 0.85, keep: 0.7, foodMax: 160, resMax: 70,
       value: { food: 1, wood: 1.2, stone: 1.2, seeds: 3, ore: 4, bronze: 14, furs: 6, idea: 12 }, giftRel: 3 },
     // Đại tiệc mùa màng: kho thức ăn ≥ 92% thì mở tiệc (tốn 15% kho), cách nhau ít nhất 3 ngày
     feast: { at: 0.92, share: 0.15, every: 3, morale: 6, health: 4 },
+  },
+  // Quân đội lớn, kẻ thù Sói Xám, tường thành, chinh phạt lớn (army.js)
+  ARMY: {
+    per: [7, 7, 7, 7, 6, 5, 4, 4],   // bao nhiêu dân thì có 1 chiến binh, theo cấp bộ lạc
+    maxShare: 0.35,                   // chiến binh tối đa 35% dân số
+    barracksPer: 28, barracksMax: 6,  // cứ 28 dân thêm 1 doanh trại, tối đa 6
+    ranks: [
+      { name: 'Lính mới',   mult: 1 },
+      { name: 'Chiến binh', mult: 1.25, guard: 4 },
+      { name: 'Tinh binh',  mult: 1.6,  guard: 6, battles: 3 },
+      { name: 'Tướng quân', mult: 2.2,  guard: 7, battles: 5 },
+    ],
+    generalPer: 15, generalBonus: 0.08, // cứ 15 chiến binh có 1 tướng; mỗi tướng đi cùng: cả đoàn mạnh thêm 8% (tối đa 3 tướng)
+    foe: { name: 'Bộ lạc Sói Xám', startDay: 14, startPop: 28, every: [4, 7], base: 3, perDay: 0.15, perPop: 0.09, max: 45, tribute: { food: 15, stone: 8, ore: 4 } },
+    wall: {
+      levels: [
+        { name: 'Chưa có tường' },
+        { name: 'Hàng rào gỗ',  wood: 60, stone: 10,  hours: 18, hp: 160, tribe: 4, spike: 2 },
+        { name: 'Tường đất đá', wood: 60, stone: 110, hours: 28, hp: 320, tribe: 6, spike: 4, invent: 'masonry' },
+        { name: 'Thành đá',     wood: 40, stone: 220, hours: 38, hp: 560, tribe: 7, spike: 7 },
+      ],
+      repair: 0.25,    // mỗi đêm tự sửa 25% độ bền (tốn gỗ/đá)
+    },
+    conquest: { valley: 10, wolves: 15, plains: 15 }, // giới hạn dân số cộng thêm khi chinh phục
   },
   CARE: { healRate: 10, patients: 4, goAt: 45, shamanBonus: 8 }, // Nhà chữa bệnh: người sức khỏe dưới 45 vào nằm chữa, hồi 10/giờ (+8 khi có vu sư chăm)
   GATHER_RATIO: 1.3,       // tỉ lệ gỗ : đá mà làng cố giữ khi đi khai thác
@@ -190,6 +219,7 @@ window.CFG = {
     wolf:  { name: 'Sói', hp: 10, dmg: 7,  speed: 25, meat: 4,  minDay: 3,  weight: 5, target: 'people' },
     bear:  { name: 'Gấu', hp: 24, dmg: 11, speed: 15, meat: 10, minDay: 7,  weight: 3, target: 'food', steal: 5, bold: true },
     tiger: { name: 'Hổ',  hp: 26, dmg: 15, speed: 23, meat: 8,  minDay: 12, weight: 2, target: 'people' },
+    wolfwar: { name: 'Chiến binh Sói Xám', hp: 22, dmg: 11, speed: 20, meat: 0, minDay: 9999, weight: 0, target: 'food', steal: 10, bold: true, raid: true },
     raider: { name: 'Kẻ đột kích', hp: 14, dmg: 8, speed: 21, meat: 0, minDay: 9999, weight: 0, target: 'food', steal: 8, bold: true, raid: true },
   },
   NAMES: ['Sông', 'Núi', 'Lá', 'Hoa', 'Trăng', 'Sao', 'Cỏ', 'Suối', 'Rêu', 'Mưa', 'Bão', 'Lửa', 'Ong', 'Sóc', 'Cò', 'Én', 'Tre', 'Mận',

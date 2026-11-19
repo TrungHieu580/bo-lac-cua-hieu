@@ -14,12 +14,14 @@ const CIV = (() => {
   const rand = () => Math.random();
   const pick = (a) => a[Math.floor(rand() * a.length)];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const cnt = (t) => S.objects.filter(o => o.type === t).length;
-  const objs = (t) => S.objects.filter(o => o.type === t);
+  const cnt = (t) => WORLD.countOf(t);
+  const objs = (t) => WORLD.objsOf(t).slice();
   const isJob = (v, t) => v.job && v.job.type === t;
   const lvl = () => (window.TRB ? TRB.level() : 1);
   const has = (id) => !!(window.SAGA && S.saga && SAGA.has(id));
   const adults = () => S.villagers.filter(v => !v.child);
+  let adK = -1, adN = 0;
+  const adultCount = () => { const k = S.day * 100 + S.hour; if (k !== adK) { adK = k; adN = adults().length; } return adN; };
   const names = (vs) => vs.map(v => v.name).join(', ');
   const SK = () => CFG.SKILL_NAMES;
   const G = () => S.civ;
@@ -49,9 +51,9 @@ const CIV = (() => {
   }
 
   // ---------------- CẤP CÔNG TRÌNH ----------------
-  const TIERED = ['hut', 'longhouse', 'granary', 'rack', 'kitchen', 'workshop', 'sickhouse', 'watchtower', 'healer', 'pen', 'barracks', 'school', 'scholar', 'well', 'smelter'];
+  const TIERED = ['hut', 'longhouse', 'clanhouse', 'granary', 'rack', 'kitchen', 'workshop', 'sickhouse', 'watchtower', 'healer', 'pen', 'barracks', 'school', 'scholar', 'well', 'smelter'];
   const TNAME = {
-    hut: ['', 'Lều cỏ', 'Nhà gỗ', 'Nhà đá'], longhouse: ['', 'Nhà dài', 'Nhà dài gỗ', 'Nhà dài đá'], granary: ['', 'Kho lương', 'Kho lương gỗ', 'Kho lương đá'],
+    hut: ['', 'Lều cỏ', 'Nhà gỗ', 'Nhà đá'], clanhouse: ['', 'Nhà sàn lớn', 'Nhà sàn gỗ quý', 'Nhà sàn mái ngói'], longhouse: ['', 'Nhà dài', 'Nhà dài gỗ', 'Nhà dài đá'], granary: ['', 'Kho lương', 'Kho lương gỗ', 'Kho lương đá'],
     watchtower: ['', 'Chòi canh', 'Tháp canh gỗ', 'Tháp canh đá'], barracks: ['', 'Doanh trại', 'Doanh trại gỗ', 'Thành lũy đá'],
   };
   const tier = (o) => o.tier || 1;
@@ -71,9 +73,13 @@ const CIV = (() => {
     const t = tier(h);
     if (h.type === 'greathall') return B.greathall.beds;
     if (h.type === 'longhouse') return [0, 6, 8, 10][t];
+    if (h.type === 'clanhouse') return [0, 16, 20, 24][t];
     return [0, 3, 4, 5][t];
   }
-  const sumBeds = () => S.objects.filter(o => o.type === 'hut' || o.type === 'longhouse' || o.type === 'greathall').reduce((s, o) => s + bedsOf(o), 0);
+  const sumBeds = () => ['hut', 'longhouse', 'greathall', 'clanhouse'].reduce((s, k) => s + WORLD.objsOf(k).reduce((a, o) => a + bedsOf(o), 0), 0);
+  // phòng riêng cho vợ chồng trong nhà sàn lớn (4/5/6 phòng theo cấp)
+  const roomsOf = (h) => h.type === 'clanhouse' ? [0, 6, 8, 10][tier(h)] : 0;
+  const coupleRooms = () => WORLD.countOf('hut') + WORLD.objsOf('clanhouse').reduce((s, o) => s + roomsOf(o), 0);
   function foodCap() {
     let n = 0;
     for (const o of S.objects) { if (o.type === 'granary') n += B.granary.foodCap * [0, 1, 1.5, 2][tier(o)]; if (o.type === 'rack') n += B.rack.foodCap * [0, 1, 1.5, 2][tier(o)]; }
@@ -169,7 +175,7 @@ const CIV = (() => {
   const PROF_JOBS = Object.values(PROF_JOB);
   const reserved = (v) => !!(v.job && PROF_JOBS.includes(v.job.type));
   function title(v) {
-    if (v.prof === 'soldier') { const i = equipRank(v); return S.civ && i >= 0 && i < G().items.bow && i >= G().items.bspear ? 'Cung thủ' : 'Chiến binh'; }
+    if (v.prof === 'soldier') { if (window.ARMY && S.army) return ARMY.rankName(v); const i = equipRank(v); return S.civ && i >= 0 && i < G().items.bow && i >= G().items.bspear ? 'Cung thủ' : 'Chiến binh'; }
     if (v.prof && PROF[v.prof]) return PROF[v.prof];
     const top = Object.entries(v.skills).sort((a, b) => b[1] - a[1])[0];
     if (top && top[1] >= 6) return `Bậc thầy ${SK()[top[0]].toLowerCase()}`;
@@ -184,7 +190,7 @@ const CIV = (() => {
     if (pop >= 30 && w.smith) w.smith++;
     if (cnt('school')) w.teacher = 1;
     const cap = objs('barracks').reduce((s, o) => s + C.barracksCap[tier(o)], 0);
-    if (cap) w.soldier = Math.min(cap, Math.floor(pop / C.soldiersPer * (lawOn('conscription') ? 1.5 : 1)));
+    if (cap) w.soldier = Math.min(cap, Math.floor(pop / (window.ARMY ? ARMY.per() : C.soldiersPer) * (lawOn('conscription') ? 1.5 : 1)), Math.floor(pop * (window.ARMY ? CFG.ARMY.maxShare : 0.3)));
     return w;
   }
   const canStaff = (v) => !v.child && !v.pregnant && v.health >= 40 && !(window.TRB && TRB.isRole(v));
@@ -261,7 +267,7 @@ const CIV = (() => {
     let m = 1 + (G().disc - 50) / 600;
     if (lawOn('labor')) m *= 1.08;
     if (lawOn('share')) m *= 0.97;
-    const tg = Math.max(1, Math.ceil(adults().length / 3));
+    const tg = Math.max(1, Math.ceil(adultCount() / 3));
     m *= 1 + 0.1 * Math.min(1, G().items.tools / tg);
     if (skill === 'build') { const w = maxTier('workshop'); if (w > 1) m *= 1 + 0.05 * (w - 1); }
     return m;
@@ -271,8 +277,9 @@ const CIV = (() => {
   const soldiers = () => S.villagers.filter(v => v.prof === 'soldier');
   function strengthOf(vs) {
     let s = 0;
-    for (const v of vs) s += (1 + (v.skills.guard || 1) * 0.4) * (v.health / 100) * fightMult(v) * (armorMult(v) < 1 ? 1.15 : 1);
+    for (const v of vs) s += (1 + (v.skills.guard || 1) * 0.4) * (v.health / 100) * fightMult(v) * (armorMult(v) < 1 ? 1.15 : 1) * (window.ARMY ? ARMY.rankMult(v) : 1);
     if (has('tactics')) s *= 1.25;
+    if (window.ARMY) s *= ARMY.generalBonus(vs);
     if (S.saga) s += Math.min(4, S.saga.dogs.length) * 0.8 + S.saga.horses * 1.2;
     return Math.round(s * 10) / 10;
   }
@@ -283,21 +290,31 @@ const CIV = (() => {
     far:  { name: 'Chinh phục vùng đất xa',    diff: () => 28 + S.day * 0.9, desc: 'Hành quân tới vùng đất xa: mang về đá, quặng, hạt giống và người theo về.' },
   };
   function targetOk(k) {
+    if (TARGETS[k] && TARGETS[k].ok) { const w = TARGETS[k].ok(); if (w) return w; }
+    if (TARGETS[k] && TARGETS[k].min && ready().length < TARGETS[k].min) return `Cần ít nhất ${TARGETS[k].min} chiến binh khỏe mạnh (có ${ready().length})`;
     if (k === 'raid') { if (!S.saga || !S.saga.nb.met) return `Chưa gặp ${NBN()}`; if (G().vassal) return `${NBN()} đã thần phục`; }
     return '';
   }
   const ready = () => soldiers().filter(v => v.health >= 60 && !v.inside);
+  // chọn đủ quân: mạnh nhất trước, tới khi sức mạnh gấp 1,6 lần địch (ít nhất 4 người hoặc số tối thiểu), phần còn lại ở nhà giữ làng
+  function pickParty(k) {
+    const all = ready().sort((a, b) => strengthOf([b]) - strengthOf([a])), tg = TARGETS[k], need = tg.diff() * 1.6, min = Math.max(4, tg.min || 0);
+    const out = [];
+    for (const v of all) { out.push(v); if (out.length >= min && strengthOf(out) >= need) break; }
+    return out;
+  }
+  const shortNames = (vs) => vs.length <= 8 ? names(vs) : `${names(vs.slice(0, 6))} và ${vs.length - 6} người khác`;
   function startCampaign(k) {
-    const g = G(), vs = ready();
+    const g = G(), vs = pickParty(k);
     if (g.campaign) return { ok: false, msg: 'Quân đội đang hành quân' };
     if (vs.length < 4) return { ok: false, msg: `Cần ít nhất 4 chiến binh khỏe mạnh (có ${vs.length})` };
     const why = targetOk(k); if (why) return { ok: false, msg: why };
     const str = strengthOf(vs);
-    g.campaign = { target: k, str, diff: Math.round(TARGETS[k].diff() * 10) / 10, back: S.day + 1, party: vs.map(v => { const c = JSON.parse(JSON.stringify(v)); c.job = null; c.task = null; c.carry = null; c.inside = 0; delete c.bed; return c; }) };
+    g.campaign = { target: k, str, diff: Math.round(TARGETS[k].diff() * 10) / 10, back: S.day + (TARGETS[k].days || 1), party: vs.map(v => { const c = JSON.parse(JSON.stringify(v)); c.job = null; c.task = null; c.carry = null; c.inside = 0; delete c.bed; return c; }) };
     const ids = new Set(vs.map(v => v.id));
     S.villagers = S.villagers.filter(v => !ids.has(v.id));
     g.lastCampaign = S.day;
-    SIM.event(`Quân đội (${names(vs)}) lên đường: ${TARGETS[k].name}! Sức mạnh ${str} so với ${g.campaign.diff}.`);
+    SIM.event(`Quân đội ${vs.length} người (${shortNames(vs)}) lên đường: ${TARGETS[k].name}! Sức mạnh ${str} so với ${g.campaign.diff}.`);
     EV.emit('toast', `⚔ Quân đội lên đường: ${TARGETS[k].name}`);
     return { ok: true, msg: `Quân đội đã lên đường (${vs.length} chiến binh)` };
   }
@@ -323,18 +340,21 @@ const CIV = (() => {
         if (EXP.hasRoom() && EXP.newcomer()) loot.push('một người theo về');
         if (window.SAGA) SAGA.memory('feet', 'Chinh phục vùng đất xa');
       }
+      if (TARGETS[c.target].onWin) TARGETS[c.target].onWin(vs, loot, add);
       for (const v of vs) { v.morale = clamp(v.morale + 8, 0, 100); if (rand() < 0.4) addXp(v, 'guard', 8); }
       S.villagers.forEach(v => v.morale = clamp(v.morale + 4, 0, 100));
       SIM.event(`Quân đội thắng trận trở về (${TARGETS[c.target].name})! Chiến lợi phẩm: ${loot.join(', ')}.`);
       EV.emit('toast', `⚔ Thắng trận! ${loot.slice(0, 3).join(', ')}`);
       if (g.wins === 1 && window.SAGA) SAGA.memory('spear', 'Chiến thắng đầu tiên của quân đội');
     } else {
+      if (TARGETS[c.target].onLose) TARGETS[c.target].onLose(vs);
       g.losses++;
       if (c.target === 'raid' && S.saga) S.saga.nb.rel = Math.max(0, S.saga.nb.rel - 10);
       S.villagers.forEach(v => v.morale = clamp(v.morale - 3, 0, 100));
       SIM.event(`Quân đội thua trận, rút về làng (${TARGETS[c.target].name}). Nhiều người bị thương.`);
       EV.emit('toast', '⚔ Quân đội thua trận, rút về');
     }
+    if (window.ARMY) ARMY.battle(vs);
     for (const v of vs) {
       const hurt = rand() < (win ? 0.35 : 0.75) * (has('tactics') ? 0.7 : 1);
       if (hurt) { const d = (win ? 10 : 20) + Math.floor(rand() * 15); v.health = clamp(v.health - d, 1, 100); }
@@ -376,7 +396,7 @@ const CIV = (() => {
     if (unlockedB('scholar') && !cnt('scholar') && !site('scholar')) return 'scholar';
     if (unlockedB('smelter') && !cnt('smelter') && !site('smelter')) return 'smelter';
     if (unlockedB('school') && !cnt('school') && !site('school')) return 'school';
-    if (unlockedB('barracks') && cnt('barracks') < (S.villagers.length >= 30 ? 2 : 1) && !site('barracks')) return 'barracks';
+    if (unlockedB('barracks') && cnt('barracks') < (window.ARMY ? ARMY.barracksWant() : (S.villagers.length >= 30 ? 2 : 1)) && !site('barracks')) return 'barracks';
     if (unlockedB('scholar') && cnt('scholar') < 2 && S.villagers.length >= 28 && !site('scholar')) return 'scholar';
     return null;
   }
@@ -760,11 +780,12 @@ const CIV = (() => {
     well: `Nước sạch cho ${C.wellServes} người (cấp 2: ${C.wellServes * 2}, cấp 3: ${C.wellServes * 3}). Làng từ 10 người trở lên thiếu nước thì sinh bệnh.`,
     scholar: 'Học giả làm việc ở đây để nghĩ ra ý tưởng mới, giúp phát minh nhanh hơn (cấp càng cao càng nhanh).',
     school: 'Thầy dạy nghề giảng dạy: trẻ con tới học lên kỹ năng, người trẻ học nghề nhanh hơn. Kỹ năng tối đa 5 → 6 (cấp 2) → 7 (cấp 3).',
+    clanhouse: 'Nhà sàn nhiều gian cho cả dòng họ: 16 chỗ ngủ (cấp 2: 20, cấp 3: 24) và 6 phòng riêng cho vợ chồng (8, 10 phòng) — vợ chồng ngủ phòng riêng vẫn có thể sinh con.',
     barracks: `Nơi chiến binh luyện tập mỗi ngày. Chứa ${C.barracksCap[1]} chiến binh (cấp 2: ${C.barracksCap[2]}, cấp 3: ${C.barracksCap[3]}). Có thể hành quân chinh phạt.`,
     smelter: 'Thợ rèn nấu 2 quặng + 1 gỗ thành 1 đồng thỏi. Cần mỏ quặng đồng (phát minh Luyện quặng).',
   };
   function tierEffect(o, t) {
-    return ({ hut: `${bedsOf({ type: 'hut', tier: t })} chỗ ngủ`, longhouse: `${bedsOf({ type: 'longhouse', tier: t })} chỗ ngủ`, granary: `+${Math.round(B.granary.foodCap * [0, 1, 1.5, 2][t])} sức chứa thức ăn`, rack: `+${Math.round(B.rack.foodCap * [0, 1, 1.5, 2][t])} sức chứa thức ăn`, kitchen: `bữa tối tiết kiệm thêm ${(t - 1) * 5}%`, workshop: `xây dựng nhanh thêm ${(t - 1) * 5}%, chế tác nhanh hơn`, sickhouse: `người bệnh hồi thêm ${(t - 1) * 4}/giờ`, watchtower: `người đánh thú mạnh thêm ${(t - 1) * 5}%`, healer: `mọi người hồi thêm ${(t - 1) * 4} sức khỏe mỗi đêm`, pen: `chứa ${CFG.PEN.cap + 2 * (t - 1)} con dê`, barracks: `chứa ${C.barracksCap[t]} chiến binh, luyện tập nhanh hơn`, school: `kỹ năng tối đa ${4 + t}`, scholar: `nghiên cứu nhanh thêm ${(t - 1) * 25}%`, well: `nước cho ${C.wellServes * t} người`, smelter: `luyện nhanh thêm ${(t - 1) * 10}%` }[o.type]) || '';
+    return ({ clanhouse: `${bedsOf({ type: 'clanhouse', tier: t })} chỗ ngủ, ${roomsOf({ type: 'clanhouse', tier: t })} phòng riêng`, hut: `${bedsOf({ type: 'hut', tier: t })} chỗ ngủ`, longhouse: `${bedsOf({ type: 'longhouse', tier: t })} chỗ ngủ`, granary: `+${Math.round(B.granary.foodCap * [0, 1, 1.5, 2][t])} sức chứa thức ăn`, rack: `+${Math.round(B.rack.foodCap * [0, 1, 1.5, 2][t])} sức chứa thức ăn`, kitchen: `bữa tối tiết kiệm thêm ${(t - 1) * 5}%`, workshop: `xây dựng nhanh thêm ${(t - 1) * 5}%, chế tác nhanh hơn`, sickhouse: `người bệnh hồi thêm ${(t - 1) * 4}/giờ`, watchtower: `người đánh thú mạnh thêm ${(t - 1) * 5}%`, healer: `mọi người hồi thêm ${(t - 1) * 4} sức khỏe mỗi đêm`, pen: `chứa ${CFG.PEN.cap + 2 * (t - 1)} con dê`, barracks: `chứa ${C.barracksCap[t]} chiến binh, luyện tập nhanh hơn`, school: `kỹ năng tối đa ${4 + t}`, scholar: `nghiên cứu nhanh thêm ${(t - 1) * 25}%`, well: `nước cho ${C.wellServes * t} người`, smelter: `luyện nhanh thêm ${(t - 1) * 10}%` }[o.type]) || '';
   }
   function addActions(p, out) {
     if (p.kind !== 'obj') return;
@@ -793,7 +814,7 @@ const CIV = (() => {
       const sol = soldiers(), rd = ready(), str = strengthOf(rd);
       const cap = objs('barracks').reduce((s, x) => s + C.barracksCap[tier(x)], 0);
       const acts = [{ spec: { type: 'drill' }, label: 'Tuyển làm chiến binh', detail: 'Người được chọn vào quân đội, luyện tập mỗi ngày và ra trận khi làng bị tấn công' }];
-      if (!g.campaign) for (const [k, tg] of Object.entries(TARGETS)) acts.push({ spec: { type: 'campaign', target: k }, label: `⚔ ${tg.name}`, detail: `${tg.desc} · Sức địch ~${Math.round(tg.diff())} · quân ta ${str} → thắng ~${Math.round(clamp(str / (str + tg.diff()) + 0.05, 0.1, 0.95) * 100)}% · đi 1 ngày`, btn: 'Hành quân' });
+      if (!g.campaign) for (const [k, tg] of Object.entries(TARGETS)) { if (tg.hidden && tg.hidden()) continue; const w = targetOk(k); acts.push({ spec: { type: 'campaign', target: k }, label: `⚔ ${tg.name}`, detail: `${tg.desc} · Sức địch ~${Math.round(tg.diff())} · quân ta ${str} → thắng ~${Math.round(clamp(str / (str + tg.diff()) + 0.05, 0.1, 0.95) * 100)}% · đi ${tg.days || 1} ngày${tg.min ? ` · cần ${tg.min} chiến binh` : ''}${w ? ` · <b>${w}</b>` : ''}`, btn: 'Hành quân' }); }
       return { title: tname(o), desc: `${DESC.barracks}<br>Quân đội: ${sol.length}/${cap} chiến binh (${rd.length} sẵn sàng) · sức mạnh ${str} · kỷ luật ${g.disc} · ${g.wins} thắng, ${g.losses} thua.${g.campaign ? ` <b>Đang hành quân: ${TARGETS[g.campaign.target].name}, về vào ngày ${g.campaign.back}.</b>` : ''}`, actions: acts };
     }
     return null;
@@ -883,6 +904,18 @@ const CIV = (() => {
       rect(x, 34, 0, 2, 10, '#5a3a1c'); rect(x, 36, 0, 8, 5, '#4fb0e0');
       SPR.school = c;
     }
+    { // Nhà sàn lớn 96×84: nhà trên cột, cầu thang, mái tranh cao
+      const [c, x] = mk(96, 84);
+      for (const cx of [6, 26, 46, 66, 86]) { rect(x, cx, 58, 4, 24, '#4a2e18'); rect(x, cx, 58, 1, 24, '#6b4224'); }
+      rect(x, 2, 54, 92, 5, '#6b4224'); rect(x, 2, 54, 92, 1, '#a87a4a');
+      rect(x, 6, 34, 84, 20, '#9a6a3a'); for (let i = 6; i < 90; i += 6) rect(x, i, 34, 1, 20, '#7a4a24');
+      for (const wx of [14, 34, 58, 76]) { rect(x, wx, 40, 7, 6, '#2a1a10'); rect(x, wx, 40, 7, 1, '#c8a060'); }
+      rect(x, 44, 40, 9, 14, '#2a1a10');
+      for (let k = 0; k < 6; k++) rect(x, 56 + k * 3, 60 + k * 4, 6, 2, '#875632');
+      roof(x, 0, 96, 4, 32, '#c8a860', '#b09040', '#8a7428');
+      rect(x, 46, 0, 4, 6, '#6b4224'); rect(x, 44, 2, 8, 2, '#875632');
+      SPR.clanhouse = c;
+    }
     { // Doanh trại 96×74
       const [c, x] = mk(96, 74);
       rect(x, 2, 30, 92, 42, '#6b4224'); for (let i = 2; i < 94; i += 5) { rect(x, i, 24, 4, 48, '#875632'); rect(x, i + 1, 22, 2, 3, '#a87a4a'); }
@@ -914,7 +947,7 @@ const CIV = (() => {
   function drawObj(o, X, Y, lx) {
     const s = SPR[o.type];
     if (o.type === 'oremine') return () => lx.drawImage(s, X, Y + T - 24);
-    if (s && ['well', 'scholar', 'school', 'barracks', 'smelter'].includes(o.type)) return () => {
+    if (s && ['well', 'scholar', 'school', 'barracks', 'smelter', 'clanhouse'].includes(o.type)) return () => {
       lx.drawImage(s, X + Math.round((o.w * T - s.width) / 2), Y + o.h * T - s.height + 2);
       if (o.type === 'smelter' && S.villagers.some(v => v.task && v.task.kind === 'smelt' && v.task.target === o.id)) {
         const t = performance.now() / 1000;
@@ -952,10 +985,10 @@ const CIV = (() => {
   }
 
   return {
-    migrate, awayIds, popBonus, TIERED, tier, tname, bedsOf, sumBeds, foodCap, kitchenBonus, penCap, skillCap, needs, livingScore, roadMult, shift,
+    migrate, awayIds, popBonus, roomsOf, coupleRooms, TIERED, tier, tname, bedsOf, sumBeds, foodCap, kitchenBonus, penCap, skillCap, needs, livingScore, roadMult, shift,
     fightMult, armorMult, workMult, reserved, title, bedtimeHour, autoJobs, wantBuild, options, handles, check, assign, planJob, task, planChild,
     jobText, WORK_POSE, tick, overnight, addActions, objActions, panelHTML, updatePanel, drawObj, hutSprite, pushDraw, SPR, DESC, ITEMS, LAWS, TARGETS,
-    strengthOf, startCampaign, toggleLaw, spawnOre,
+    strengthOf, startCampaign, toggleLaw, spawnOre, ready, addXp,
   };
 })();
 window.CIV = CIV;

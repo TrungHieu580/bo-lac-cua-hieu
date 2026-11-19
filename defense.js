@@ -181,6 +181,7 @@ const DEF = (() => {
       return;
     }
     b.state = 'come';
+    if (window.ARMY && ARMY.wallHold(b, dt)) return;
     const tgt = chooseTarget(b);
     if (!tgt) { // rình quanh làng
       b.hold -= dt;

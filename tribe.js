@@ -446,7 +446,7 @@ const TRB = (() => {
       const a = k / n * Math.PI * 2, sx = Math.round(cx + Math.cos(a) * rx), sy = Math.round(cy + Math.sin(a) * ry);
       if (Math.sin(a) >= -0.2) { R(lx, sx - 2, sy - 1, 4, 3, '#7d8188'); R(lx, sx - 1, sy - 1, 2, 1, '#b4b8bc'); }
     }
-    if (L >= 3 && spr) { const s = 1 + (L - 2) * 0.25, w = Math.round(spr.width * s), h = Math.round(spr.height * s); lx.globalAlpha = 0.85; lx.drawImage(spr, X + 12 - Math.round(w / 2), Y + spr.height - 2 - h, w, h); lx.globalAlpha = 1; }
+    if (L >= 3 && spr) { const s = 1 + (Math.min(L, 6) - 2) * 0.25, w = Math.round(spr.width * s), h = Math.round(spr.height * s); lx.globalAlpha = 0.85; lx.drawImage(spr, X + 12 - Math.round(w / 2), Y + spr.height - 2 - h, w, h); lx.globalAlpha = 1; }
     if (L >= 4) for (let k = 0; k < 4 + L; k++) { // tàn lửa bay lên
       const ph = (time * 0.7 + k * 0.37) % 1, sx = Math.round(cx + Math.sin(k * 2.3 + time * 2) * 6), sy = Math.round(Y - 4 - ph * 26);
       lx.globalAlpha = 1 - ph; R(lx, sx, sy, 1, 1, ph < 0.5 ? '#ffd23a' : '#ff8a3a'); lx.globalAlpha = 1;

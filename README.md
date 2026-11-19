@@ -55,6 +55,7 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 | `ui.js` | Thanh trên và thanh dưới, bảng dân làng, xây dựng, nhật ký, bảng hành động, modal |
 | `main.js` | Vòng lặp game, điều khiển chuột, cảm ứng, bàn phím, tự lưu |
 | `civ.js` | Cấp công trình, hạ tầng theo dân số, nghiên cứu, luyện chế, ngành nghề, luật lệ, quân đội & hành quân |
+| `army.js` | Quân đội lớn & cấp bậc, Bộ lạc Sói Xám, cổng làng & tường thành, chinh phạt lớn mở thêm dân số |
 | `land.js` | Bản đồ mở rộng theo cấp bộ lạc, khai hoang rừng, bắc cầu, ranh giới đất làng |
 | `saga.js` | Giữ lửa, bốn mùa, voi ma mút, thám hiểm, chó & ngựa, phát minh & thời đại, bộ lạc lân cận, tranh hang |
 
@@ -104,11 +105,22 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Ngành nghề:** học giả, thợ rèn, thầy dạy nghề, chiến binh (làng tự cử theo dân số). Trường dạy nghề: trẻ con đi học; làm việc lâu thì lên kinh nghiệm, kỹ năng tới bậc 6–7 (bậc thầy) khi trường được nâng cấp.
 - **Luật lệ & kỷ luật:** Chia đều thức ăn, Kính lão & truyền nghề, Lao động chung, Tế lễ định kỳ, Nghĩa vụ quân sự, Giờ giới nghiêm — mỗi luật có lợi có hại; số luật tăng theo cấp bộ lạc. Kỷ luật (0–100) ảnh hưởng tốc độ làm việc và sức chiến đấu; quá thấp thì dân cãi nhau.
 - **Quân đội:** Doanh trại (6/10/14 chiến binh), chiến binh luyện tập mỗi ngày, tự ra trận khi có thú dữ/đột kích; trang bị giáo đồng, cung, giáp. **Hành quân** (chạm doanh trại): diệt hang thú dữ (làng yên ổn 5 ngày), tấn công trại Bộ lạc Đá Đỏ (họ thần phục và nộp cống mỗi ngày), chinh phục vùng đất xa (đá, quặng, hạt giống, người theo về).
-- **Thịnh vượng:** ở bộ lạc cấp 5, xây Đại sảnh tù trưởng (+5) và giữ mức sống từ 85% trở lên khi đã biết Xây đá (+5) — giới hạn dân số tăng từ 40 lên tối đa 50.
+- **Thịnh vượng:** từ bộ lạc cấp 5, xây Đại sảnh tù trưởng (+10) và giữ mức sống từ 85% trở lên khi đã biết Xây đá (+10) để đón thêm người.
 - **Đoàn buôn:** thức ăn, gỗ hoặc đá đầy trên 85% kho thì mỗi đêm làng mang bớt sang Bộ lạc Đá Đỏ đổi lấy thứ đang thiếu (hạt giống, quặng, áo lông, đồng thỏi, ý tưởng); không thiếu gì thì biếu quà cho tới khi kết minh.
 - **Đại tiệc mùa màng:** kho thức ăn trên 92% thì mở tiệc lớn (tốn 15% kho, cách nhau ít nhất 3 ngày): tinh thần +6, sức khỏe +4, dân làng thêm gắn bó.
 - **Dân số tăng nhanh hơn:** mỗi đêm 50% có người mới tới (70% khi làng dưới 12 người), 35% trong số đó là một đôi vợ chồng trẻ; người mới ưu tiên giới đang ít hơn để dễ thành đôi; vợ chồng thành đôi khi tình thân ≥ 50, khả năng mang thai 55%, cách nhau 3 ngày; làng luôn chừa sẵn 3 chỗ ngủ. Thử nghiệm: 40 dân vào khoảng ngày 25–30, 50 dân vào khoảng ngày 30–36 (trước đây ngày 48 và 57).
 - **Sửa lỗi:** dân số tính cả người đang thám hiểm/hành quân và em bé sắp sinh nên không còn vượt giới hạn; mỗi lần thu hoạch giữ lại 4 hạt giống (sức chứa hạt 40) nên ruộng không còn bỏ trống vì thiếu hạt; bản đồ mở rộng luôn có bãi săn mới (nếu vùng đất mới chật thì chọn đồng cỏ/rừng khác xa làng và dọn cây bụi).
+
+## Quân đội lớn & bộ lạc 200 người (army.js)
+
+- **Bộ lạc 8 cấp:** Bếp lửa (14 dân) → Lửa trại (22) → Đống lửa lớn (30) → Lửa thiêng (40) → Ngọn lửa tổ tiên (50) → Hỏa đàn liên minh (70) → Đuốc thiêng vương quyền (100) → Ngọn lửa vĩnh cửu (140). Bản đồ lớn dần tới 128×96 ô. Thịnh vượng từ cấp 5: Đại sảnh +10, mức sống tốt +10. Chinh phạt lớn mở thêm tới +40 — tối đa **200 dân**.
+- **Nhà sàn lớn** (cấp 6): 16/20/24 chỗ ngủ và 6/8/10 phòng riêng cho vợ chồng (ngủ phòng riêng vẫn sinh con). Làng càng đông càng có nhiều người tìm đến (mỗi 40 dân thêm một lượt mỗi đêm).
+- **Quân đội:** cứ 7 dân có 1 chiến binh, cấp 5: 6 dân, cấp 6: 5 dân, cấp 7–8: 4 dân (tối đa 35% dân số; luật Nghĩa vụ quân sự ×1,5). Doanh trại: cứ 28 dân thêm 1, tối đa 6; mỗi doanh trại chứa 6/10/16 lính.
+- **Cấp bậc:** Lính mới → Chiến binh (Bảo vệ 4, mạnh ×1,25) → Tinh binh (Bảo vệ 6 + 3 trận, ×1,6) → Tướng quân (Bảo vệ 7 + 5 trận, ×2,2; cứ 15 lính có 1 tướng, mỗi tướng đi cùng: cả đoàn +8%). Mỗi trận hành quân hoặc giữ làng đều tính kinh nghiệm.
+- **Bộ lạc Sói Xám** (từ ngày 14 khi làng có 28 dân): cứ 4–7 ngày kéo quân tấn công từ bên ngoài tường, số quân tăng theo ngày và dân số (tới 45). Chòi canh/tiên tri báo trước.
+- **Cổng làng & tường thành:** xây Cổng làng (bộ lạc cấp 4) rồi dựng Hàng rào gỗ (cấp 4) → Tường đất đá (cấp 6, cần Xây đá) → Thành đá (cấp 7). Tường bao quanh mọi công trình; kẻ địch phải phá tường mới vào được, đứng ở chân tường thì bị cọc nhọn và tên làm bị thương. Mỗi đêm tường tự sửa 25% (tốn gỗ/đá).
+- **Chinh phạt lớn** (chạm Doanh trại): Chiếm thung lũng sông (cần 12 chiến binh, 2 ngày, +10 dân tối đa) · Đánh tan Bộ lạc Sói Xám (20 chiến binh, 2 ngày — chúng thần phục, nộp cống, +15 dân) · Chinh phục đồng bằng phía nam (30 chiến binh, 3 ngày, sau thung lũng, +15 dân). Làng chỉ cử đủ quân (sức mạnh gấp 1,6 lần địch), số còn lại ở nhà giữ làng.
+- **Hiệu năng:** bộ lập kế hoạch đếm sẵn người làm, lọc công trình theo loại, chia lượt phân việc — làng 200 người vẫn chạy mượt.
 
 ## Đất đai mở rộng (land.js)
 

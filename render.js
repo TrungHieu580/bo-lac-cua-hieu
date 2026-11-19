@@ -108,6 +108,7 @@ const RENDER = (() => {
     if (t.kind === 'heal' || t.kind === 'healHouse' || t.kind === 'cook') return 'work';
     if (window.SAGA && SAGA.WORK_POSE.includes(t.kind)) return 'work';
     if (window.LAND && LAND.WORK_POSE.includes(t.kind)) return 'work';
+    if (window.ARMY && ARMY.WORK_POSE.includes(t.kind)) return 'work';
     if (window.CIV && CIV.WORK_POSE.includes(t.kind)) return 'work';
     if (t.kind === 'study' || t.kind === 'teach' || t.kind === 'learn') return 'sit';
     if (t.kind === 'ritual') return 'walk';
@@ -243,6 +244,7 @@ const RENDER = (() => {
     if (window.SAGA) SAGA.pushDraw(list, lx, L, Tp, time, shadow);
     if (window.LAND) LAND.pushDraw(list, lx, L, Tp);
     if (window.CIV) CIV.pushDraw(list, lx, L, Tp, time);
+    if (window.ARMY) ARMY.pushDraw(list, lx, L, Tp);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 

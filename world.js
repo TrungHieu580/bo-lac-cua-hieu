@@ -44,8 +44,18 @@ const WORLD = (() => {
   function byId(id) { return S.objects.find(o => o.id === id) || null; }
   function addObj(o) { o.id = S.nextId++; S.objects.push(o); return o; }
   function removeObj(o) { const k = S.objects.indexOf(o); if (k >= 0) S.objects.splice(k, 1); rebuild(); }
-  function fire() { return S.objects.find(o => o.type === 'fire'); }
-  function storage() { return S.objects.find(o => o.type === 'storage'); }
+  // bộ nhớ đệm theo loại công trình: làm mới khi giờ game, số đối tượng hoặc id kế tiếp thay đổi
+  let tcKey = '', tc = null;
+  function byType() {
+    const k = S.day + '|' + S.hour + '|' + S.nextId + '|' + S.objects.length;
+    if (k !== tcKey || !tc) { tcKey = k; tc = new Map(); for (const o of S.objects) { let a = tc.get(o.type); if (!a) tc.set(o.type, a = []); a.push(o); } }
+    return tc;
+  }
+  const EMPTY = [];
+  function objsOf(t) { return byType().get(t) || EMPTY; }
+  function countOf(t) { const a = byType().get(t); return a ? a.length : 0; }
+  function fire() { const a = byType().get('fire'); return a && a.length && a[0].type === 'fire' ? a[0] : S.objects.find(o => o.type === 'fire'); }
+  function storage() { const a = byType().get('storage'); return a && a.length && a[0].type === 'storage' ? a[0] : S.objects.find(o => o.type === 'storage'); }
 
   // ô đi được bao quanh một vật thể (8 hướng)
   function ringTiles(o) {
@@ -266,5 +276,5 @@ const WORLD = (() => {
     }
   }
 
-  return { get W() { return W; }, get H() { return H; }, T, TER, TI, ter, setTer, walkable, passTer, rebuild, objAt, byId, addObj, removeObj, fire, storage, ringTiles, insideTiles, findPath, nearestWalkable, mainRegion, inMain, nearestMain, generate, inb, idx, BLOCKING };
+  return { get W() { return W; }, get H() { return H; }, T, TER, TI, ter, setTer, walkable, passTer, rebuild, objAt, byId, addObj, removeObj, fire, storage, objsOf, countOf, ringTiles, insideTiles, findPath, nearestWalkable, mainRegion, inMain, nearestMain, generate, inb, idx, BLOCKING };
 })();

@@ -65,6 +65,19 @@ const QST = (() => {
     { id: 'win1',      t: 'Thắng một trận hành quân',       cur: () => (S.civ ? S.civ.wins : 0), need: 1, r: { food: 40, morale: 10 } },
     { id: 'tier3',     t: 'Xây ngôi nhà đá (cấp 3)',         cur: () => S.objects.filter(o => (o.tier || 1) >= 3).length, need: 1, r: { buff: [1.1, 3], morale: 10 } },
     { id: 'era3',      t: 'Bước sang Thời đồ đồng',          cur: () => sg(g => g.era),           need: 3,   r: { buff: [1.15, 5], morale: 15, health: 15 } },
+    { id: 'pop70',     t: 'Bộ lạc đông 70 người',            cur: () => S.villagers.length,       need: 70,  r: { wood: 60, stone: 60, morale: 10 } },
+    { id: 'gate1',     t: 'Xây Cổng làng',                   cur: () => cnt('gate'),              need: 1,   r: { wood: 30, stone: 30 } },
+    { id: 'wall1',     t: 'Dựng hàng rào gỗ quanh làng',     cur: () => (S.army ? S.army.wall.lvl : 0), need: 1, r: { spears: 6, morale: 8 } },
+    { id: 'army20',    t: 'Có quân đội 20 chiến binh',       cur: () => S.villagers.filter(v => v.prof === 'soldier').length, need: 20, r: { food: 60, skill: ['guard', 'guards'] } },
+    { id: 'repel3',    t: 'Đẩy lui Sói Xám 3 lần',            cur: () => (S.army ? S.army.foe.repelled : 0), need: 3, r: { buff: [1.1, 3], morale: 12 } },
+    { id: 'general1',  t: 'Phong một Tướng quân',            cur: () => S.villagers.filter(v => v.general).length, need: 1, r: { morale: 10, health: 10 } },
+    { id: 'pop100',    t: 'Bộ lạc đông 100 người',           cur: () => S.villagers.length,       need: 100, r: { wood: 100, stone: 100, buff: [1.1, 4] } },
+    { id: 'valley1',   t: 'Chiếm thung lũng sông',           cur: () => (S.army ? S.army.conq.valley : 0), need: 1, r: { food: 80, seeds: 10 } },
+    { id: 'wall3',     t: 'Xây Thành đá',                    cur: () => (S.army ? S.army.wall.lvl : 0), need: 3, r: { morale: 15, health: 10 } },
+    { id: 'wolves1',   t: 'Đánh tan Bộ lạc Sói Xám',          cur: () => (S.army ? S.army.conq.wolves : 0), need: 1, r: { buff: [1.15, 5], morale: 15 } },
+    { id: 'pop150',    t: 'Bộ lạc đông 150 người',           cur: () => S.villagers.length,       need: 150, r: { wood: 150, stone: 150, morale: 15 } },
+    { id: 'plains1',   t: 'Chinh phục đồng bằng phía nam',   cur: () => (S.army ? S.army.conq.plains : 0), need: 1, r: { buff: [1.15, 5], health: 20 } },
+    { id: 'pop200',    t: 'Bộ lạc hùng mạnh 200 người',      cur: () => S.villagers.length,       need: 200, r: { buff: [1.2, 7], morale: 20, health: 20 } },
   ];
   const SKN = () => CFG.SKILL_NAMES;
   function rewardText(r) {

@@ -6,8 +6,8 @@ const VIL = (() => {
   const T = CFG.TILE, KC = CFG.KITCHEN, PN = CFG.PEN, GR = CFG.GRAND, B = CFG.BUILDINGS;
   const rand = () => Math.random();
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const cnt = (t) => S.objects.filter(o => o.type === t).length;
-  const pens = () => S.objects.filter(o => o.type === 'pen');
+  const cnt = (t) => WORLD.countOf(t);
+  const pens = () => WORLD.objsOf('pen').slice();
   const kitchen = () => S.objects.find(o => o.type === 'kitchen');
   const isJob = (v, t) => v.job && v.job.type === t;
 
