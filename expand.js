@@ -542,9 +542,9 @@ const EXP = (() => {
     S.planNote = '';
     if (!st.upgrading && storageFull()) want = 'upgrade'; // ưu tiên số 1: kho gần đầy thì nâng cấp
     else if (!site && !st.upgrading) {
-      const shortBeds = Math.min(pop + 2, CFG.POP.max) - beds();
+      const shortBeds = Math.min(popNow() + 3, popLimit()) - beds();
       if (shortBeds > 0) want = unlocked('longhouse') && count('longhouse') < Math.floor(pop / 8) ? 'longhouse' : 'hut';
-      else if (coupleCount() > count('hut')) { want = 'hut'; S.planNote = 'Vợ chồng cần lều riêng để ngủ chung'; }
+      else if (coupleCount() > count('hut') && hasRoom()) { want = 'hut'; S.planNote = 'Vợ chồng cần lều riêng để ngủ chung'; }
       else if (window.TRB && TRB.wantFire()) want = 'fire';
       else if (unlocked('granary') && count('granary') < B.granary.max && st.level >= CFG.STORAGE_CAP.length - 1 && S.res.food >= SIM.cap('food') * 0.85) { want = 'granary'; S.planNote = 'Kho thức ăn sắp đầy — xây thêm kho lương'; }
       else if (st.level === 0 && pop >= 8) want = 'upgrade';
@@ -708,8 +708,12 @@ const EXP = (() => {
     S.villagers.push(v);
     return v;
   }
-  function newcomer() {
+  function newcomer(sex) {
     if (!hasRoom()) return null;
+    if (!sex) { // ưu tiên giới đang ít hơn để dễ thành đôi
+      const ad = adults(), m = ad.filter(v => v.sex === 'm').length, f = ad.length - m;
+      sex = m === f ? (rand() < 0.5 ? 'm' : 'f') : rand() < 0.75 ? (m < f ? 'm' : 'f') : (m < f ? 'f' : 'm');
+    }
     const counts = { hunt: 0, gather: 0, build: 0, farm: 0, guard: 0 };
     adults().forEach(a => counts[a.main]++);
     const main = Object.keys(counts).sort((a, b) => counts[a] - counts[b] + (rand() - 0.5))[0];
@@ -717,11 +721,19 @@ const EXP = (() => {
     skills[main] = 4 + (rand() < 0.4 ? 1 : 0);
     const f = WORLD.fire();
     const tile = WORLD.nearestMain(Math.max(0, f.x - 12), f.y + 1);
-    const v = addVillager({ name: newName(), main, skills, hair: pick(HAIRS), tunic: pick(TUNICS), band: pick(BANDS), skin: pick(SKINS), energy: 80, health: 90, morale: 65, child: false, sex: rand() < 0.5 ? 'm' : 'f', partner: 0, pregnant: 0 }, tile);
+    const v = addVillager({ name: newName(), main, skills, hair: pick(HAIRS), tunic: pick(TUNICS), band: pick(BANDS), skin: pick(SKINS), energy: 80, health: 90, morale: 65, child: false, sex, partner: 0, pregnant: 0 }, tile);
     S.pop.arrivals++;
     SIM.event(`${v.name} (giỏi ${SK[main]}) từ một bộ lạc xa tìm đến xin gia nhập.`);
     EV.emit('toast', `Người mới: ${v.name} gia nhập bộ lạc!`);
     return v;
+  }
+  // một đôi vợ chồng trẻ cùng tìm đến
+  function newCouple() {
+    const m = newcomer('m'); if (!m) return;
+    const f = newcomer('f'); if (!f) return;
+    m.partner = f.id; f.partner = m.id;
+    m.bonds[f.id] = f.bonds[m.id] = 85;
+    SIM.event(`${m.name} và ${f.name} là đôi vợ chồng trẻ, cùng nhau tìm đến xin ở lại bộ lạc.`);
   }
   function birth(a, b) {
     const main = rand() < 0.5 ? a.main : b.main;
@@ -770,7 +782,9 @@ const EXP = (() => {
     const P = CFG.POP;
     const ok = () => hasRoom() && SIM.foodDays() >= P.minFoodDays && avgMorale() >= P.minMorale;
     family(ok);
-    if (ok() && rand() < P.newcomerChance) newcomer();
+    if (ok() && rand() < P.newcomerChance + (S.villagers.length < 12 ? P.smallBonus : 0)) {
+      if (hasRoom(2) && rand() < P.coupleChance) newCouple(); else newcomer();
+    }
     unlocks();
     festival();
     if (count('healer')) for (const v of S.villagers) v.health = Math.min(100, v.health + CFG.HEALER.heal);

@@ -87,10 +87,10 @@ window.CFG = {
 
   // ---- Tự động & phát triển ----
   AUTO: { interval: 0.25, defaultOn: true },     // bộ lập kế hoạch chạy mỗi 0.25 giờ game
-  POP: { childDays: 4, newcomerChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 40 },
+  POP: { childDays: 4, newcomerChance: 0.5, smallBonus: 0.2, coupleChance: 0.35, birthChance: 0.3, birthGapDays: 3, minFoodDays: 3, minMorale: 55, bondForBirth: 70, max: 40 },
   REGROW: { saplingChance: 0.3, saplingDays: 3, boulderChance: 0.75, boulderMaxExtra: 10 },
   NEW_PLOT_RADIUS: 16,
-  FAMILY: { coupleBond: 60, pregnancyDays: 3, pregnancyChance: 0.4, birthGapDays: 4, pregnantWork: 0.7 }, // chỉ có thể mang thai khi vợ chồng ngủ chung một lều riêng
+  FAMILY: { coupleBond: 50, pregnancyDays: 3, pregnancyChance: 0.55, birthGapDays: 3, pregnantWork: 0.7 }, // chỉ có thể mang thai khi vợ chồng ngủ chung một lều riêng
   FISH: { unlock: 8, spots: 5 },
   FESTIVAL: { unlock: 10, everyDays: 7, morale: 12, bond: 5 },
   HEALER: { heal: 12 },

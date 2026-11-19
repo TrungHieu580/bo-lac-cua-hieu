@@ -107,6 +107,7 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Thịnh vượng:** ở bộ lạc cấp 5, xây Đại sảnh tù trưởng (+5) và giữ mức sống từ 85% trở lên khi đã biết Xây đá (+5) — giới hạn dân số tăng từ 40 lên tối đa 50.
 - **Đoàn buôn:** thức ăn, gỗ hoặc đá đầy trên 85% kho thì mỗi đêm làng mang bớt sang Bộ lạc Đá Đỏ đổi lấy thứ đang thiếu (hạt giống, quặng, áo lông, đồng thỏi, ý tưởng); không thiếu gì thì biếu quà cho tới khi kết minh.
 - **Đại tiệc mùa màng:** kho thức ăn trên 92% thì mở tiệc lớn (tốn 15% kho, cách nhau ít nhất 3 ngày): tinh thần +6, sức khỏe +4, dân làng thêm gắn bó.
+- **Dân số tăng nhanh hơn:** mỗi đêm 50% có người mới tới (70% khi làng dưới 12 người), 35% trong số đó là một đôi vợ chồng trẻ; người mới ưu tiên giới đang ít hơn để dễ thành đôi; vợ chồng thành đôi khi tình thân ≥ 50, khả năng mang thai 55%, cách nhau 3 ngày; làng luôn chừa sẵn 3 chỗ ngủ. Thử nghiệm: 40 dân vào khoảng ngày 25–30, 50 dân vào khoảng ngày 30–36 (trước đây ngày 48 và 57).
 - **Sửa lỗi:** dân số tính cả người đang thám hiểm/hành quân và em bé sắp sinh nên không còn vượt giới hạn; mỗi lần thu hoạch giữ lại 4 hạt giống (sức chứa hạt 40) nên ruộng không còn bỏ trống vì thiếu hạt; bản đồ mở rộng luôn có bãi săn mới (nếu vùng đất mới chật thì chọn đồng cỏ/rừng khác xa làng và dọn cây bụi).
 
 ## Đất đai mở rộng (land.js)
