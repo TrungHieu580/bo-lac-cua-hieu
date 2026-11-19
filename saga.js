@@ -366,7 +366,7 @@ const SAGA = (() => {
     const found = [];
     const risk = EX.risk - (has('shoes') ? 0.1 : 0) - (horses() ? 0.05 : 0);
     const roll = () => {
-      const opts = [['res', 3], ['seeds', 2], ['furs', 2], ['idea', 2], ['people', S.villagers.length < (window.EXP ? EXP.popLimit() : 40) && EXP.beds() > S.villagers.length ? 2 : 0],
+      const opts = [['res', 3], ['seeds', 2], ['furs', 2], ['idea', 2], ['people', EXP.hasRoom() ? 2 : 0],
         ['pup', g.pups.length + g.dogs.length < PE.maxDogs ? 1.5 : 0], ['tribe', g.nb.met ? 0 : 3], ['horse', lvl() >= PE.horseLevel && !wildHorse() && g.horses < PE.maxHorses ? 1.5 : 0], ['beast', 1]];
       let tot = opts.reduce((s, o) => s + o[1], 0), r = rand() * tot;
       for (const [k, w] of opts) { r -= w; if (r <= 0) return k; }
@@ -378,7 +378,7 @@ const SAGA = (() => {
       if (k === 'seeds') { const n = 6 + Math.floor(rand() * 6); S.res.seeds = Math.min(CFG.SEED_CAP, S.res.seeds + n); found.push(`hạt giống lạ (+${n} hạt)`); }
       if (k === 'furs') { g.furs = Math.min(SE.furCap, g.furs + 4); found.push('xác thú lớn còn tốt (+4 áo lông)'); }
       if (k === 'idea') { addIdeas(4); found.push('hang đá cổ có hình vẽ lạ, học được cách làm mới (+4 ý tưởng)'); }
-      if (k === 'people') { EXP.newcomer(); found.push('một người lang thang xin theo về'); }
+      if (k === 'people' && EXP.newcomer()) found.push('một người lang thang xin theo về');
       if (k === 'pup') { addPup('Đoàn thám hiểm ôm về một con sói con bị lạc mẹ.'); found.push('một con sói con'); }
       if (k === 'tribe') { g.nb.met = true; g.nb.rel = clamp(g.nb.rel + 5, 0, 100); found.push(`làng của ${NB.name} bên kia núi`); memory('hand', `Gặp ${NB.name}`); }
       if (k === 'horse') { spawnWildHorse(); found.push('một đàn ngựa hoang, một con đang theo về gần làng'); }
@@ -578,7 +578,7 @@ const SAGA = (() => {
       }
       if (nb.ally) {
         if (rand() < 0.2) { const k = pick(['food', 'stone', 'wood']), n = k === 'food' ? 12 : 8; addRes(k, n); SIM.log(`${NB.name} gửi quà tặng: ${n} ${RES_NAME[k]}.`, 'ev'); }
-        if (rand() < 0.07 && S.villagers.length < EXP.popLimit() && EXP.beds() > S.villagers.length) { EXP.newcomer(); SIM.log(`Một người của ${NB.name} về làm dâu rể bộ lạc của Hiếu.`, 'ev'); }
+        if (rand() < 0.07 && EXP.hasRoom() && EXP.newcomer()) { SIM.log(`Một người của ${NB.name} về làm dâu rể bộ lạc của Hiếu.`, 'ev'); }
       }
     }
     // tranh hang

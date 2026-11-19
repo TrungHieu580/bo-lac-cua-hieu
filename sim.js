@@ -663,7 +663,9 @@ const SIM = (() => {
     } else if (mode === 'harvest') {
       o.state = 'cleared'; o.progress = 0; o.yieldLeft = CFG.FARM.yield; o.seeded = false;
       S.stats.fields++; S.today.harvests++;
-      event(`Thu hoạch xong một ruộng: ${CFG.FARM.yield} phần lương thực đang được mang về kho.`);
+      const sr = Math.max(0, Math.min(CFG.FARM.seedReturn || 0, CFG.SEED_CAP - S.res.seeds));
+      S.res.seeds += sr; S.today.seedsIn += sr;
+      event(`Thu hoạch xong một ruộng: ${CFG.FARM.yield} phần lương thực đang được mang về kho${sr ? `, giữ lại ${sr} hạt giống cho vụ sau` : ''}.`);
       EV.emit('plot', o); EV.emit('toast', 'Thu hoạch xong ruộng!');
     } else if (mode === 'build') {
       WORLD.removeObj(o);

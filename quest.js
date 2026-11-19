@@ -116,7 +116,7 @@ const QST = (() => {
     }
     if (r.buff) S.quests.buff = { mult: r.buff[0], until: S.day + r.buff[1] };
     if (r.newcomer) {
-      if (window.EXP && S.villagers.length < EXP.popLimit()) EXP.newcomer();
+      if (window.EXP && EXP.hasRoom()) EXP.newcomer();
       else { add('food', 30); extra = ' (bộ lạc đã đông, thay bằng 30 thức ăn)'; }
     }
     if (r.bless) for (const o of S.objects) if (o.type === 'plot' && (o.state === 'sown' || o.state === 'growing')) { o.growth += 1; if (o.growth >= CFG.FARM.growDays) o.state = 'ready'; EV.emit('plot', o); }

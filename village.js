@@ -144,7 +144,7 @@ const VIL = (() => {
     // công trình đồ sộ
     if (cnt('temple')) {
       S.villagers.forEach(v => v.morale = clamp(v.morale + GR.templeMorale, 0, 100));
-      if (window.EXP && S.villagers.length < EXP.popLimit() && EXP.beds() > S.villagers.length && rand() < GR.templeNewcomer) { EXP.newcomer(); SIM.log('Tiếng thơm của Đền tổ tiên thu hút người từ xa tìm đến.', 'ev'); }
+      if (window.EXP && EXP.hasRoom() && rand() < GR.templeNewcomer && EXP.newcomer()) { SIM.log('Tiếng thơm của Đền tổ tiên thu hút người từ xa tìm đến.', 'ev'); }
     }
     if (cnt('stonering')) {
       S.villagers.forEach(v => v.morale = clamp(v.morale + GR.ringMorale, 0, 100));

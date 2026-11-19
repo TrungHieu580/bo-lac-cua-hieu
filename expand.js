@@ -33,7 +33,10 @@ const EXP = (() => {
   function foodCapBonus() { return (window.CIV ? CIV.foodCap() : count('rack') * B.rack.foodCap + count('granary') * B.granary.foodCap) + (window.SAGA && S.saga ? SAGA.capBonus() : 0); }
   function meatMult() { return 1 + Math.min(2, count('rack')) * B.rack.meatBonus; }
   function buildRadius() { return CFG.BUILD_RADIUS + Math.max(0, Math.floor((S.villagers.length - 6) / 2)) + (window.TRB ? TRB.radiusBonus() : 0); }
-  const popLimit = () => Math.min(CFG.POP.max, window.TRB ? TRB.popCap() : CFG.POP.max);
+  const popLimit = () => Math.min(CFG.POP.max, window.TRB ? TRB.popCap() : CFG.POP.max) + (window.CIV ? CIV.popBonus() : 0);
+  // dân số thực: người ở làng + người đang đi xa (thám hiểm, hành quân) + em bé sắp chào đời
+  const popNow = () => S.villagers.length + (window.SAGA ? SAGA.awayIds().length : 0) + (window.CIV ? CIV.awayIds().length : 0) + S.villagers.filter(v => v.pregnant > 0).length;
+  const hasRoom = (n = 1) => popNow() + n <= popLimit() && popNow() + n <= beds();
   function bname(k) { return (B[k] && B[k].name) || 'Công trình'; }
   function bdesc(k) { return DESC[k] || (window.VIL && VIL.DESC[k]) || (window.SAGA && SAGA.DESC[k]) || (window.CIV && CIV.DESC[k]) || ''; }
   const inventOk = (k) => !B[k].invent || !!(window.SAGA && S.saga && SAGA.has(B[k].invent));
@@ -706,6 +709,7 @@ const EXP = (() => {
     return v;
   }
   function newcomer() {
+    if (!hasRoom()) return null;
     const counts = { hunt: 0, gather: 0, build: 0, farm: 0, guard: 0 };
     adults().forEach(a => counts[a.main]++);
     const main = Object.keys(counts).sort((a, b) => counts[a] - counts[b] + (rand() - 0.5))[0];
@@ -717,6 +721,7 @@ const EXP = (() => {
     S.pop.arrivals++;
     SIM.event(`${v.name} (giỏi ${SK[main]}) từ một bộ lạc xa tìm đến xin gia nhập.`);
     EV.emit('toast', `Người mới: ${v.name} gia nhập bộ lạc!`);
+    return v;
   }
   function birth(a, b) {
     const main = rand() < 0.5 ? a.main : b.main;
@@ -763,7 +768,7 @@ const EXP = (() => {
   function overnight() {
     for (const v of S.villagers) if (v.child && S.day >= v.growDay) { v.child = false; SIM.event(`${v.name} đã lớn và bắt đầu phụ giúp bộ lạc.`); }
     const P = CFG.POP;
-    const ok = () => S.villagers.length < popLimit() && beds() - S.villagers.length >= 1 && SIM.foodDays() >= P.minFoodDays && avgMorale() >= P.minMorale;
+    const ok = () => hasRoom() && SIM.foodDays() >= P.minFoodDays && avgMorale() >= P.minMorale;
     family(ok);
     if (ok() && rand() < P.newcomerChance) newcomer();
     unlocks();
@@ -797,8 +802,7 @@ const EXP = (() => {
       if (f.sex !== 'f' || !f.partner || f.pregnant > 0 || f.health < 60) continue;
       if (!(S.nightCouples || []).some(c => c[1] === f.id)) continue; // phải cùng vào lều riêng đêm qua
       if (S.day - (f.lastBirth || -99) < F.birthGapDays) continue;
-      const coming = S.villagers.filter(v => v.pregnant > 0).length;
-      if (S.villagers.length + coming >= Math.min(popLimit(), beds())) break;
+      if (!hasRoom()) break;
       if (rand() < F.pregnancyChance) {
         f.pregnant = F.pregnancyDays;
         const dad = SIM.vById(f.partner);
@@ -1022,7 +1026,7 @@ const EXP = (() => {
 
   return {
     migrate, generate, spriteFor, drawObj, drawChild, foodCapBonus, meatMult, buildRadius, bname, bdesc, beds, popText,
-    handles, check, assign, ghostFor, placeActions, tileActions, plotSpotAt, snapBuild, freeSlots, popLimit, buildPanelHTML, autoPanelHTML, updateAutoPanel, onPanelAct,
+    handles, check, assign, ghostFor, placeActions, tileActions, plotSpotAt, snapBuild, freeSlots, popLimit, popNow, hasRoom, buildPanelHTML, autoPanelHTML, updateAutoPanel, onPanelAct,
     tick, overnight, autoSkip, findSpot, findPlotSpot, createPlot,
     upgradeCost, workMult, chatPair, familyText, objActions, drawFishCarry, newcomer, gatherBias, count,
   };

@@ -25,7 +25,7 @@ window.CFG = {
 
   START: { food: 12, wood: 5, stone: 0, seeds: 0 },
   STORAGE_CAP: [40, 100, 180, 300], // sức chứa mỗi loại theo cấp kho (cấp 1 → 4)
-  SEED_CAP: 30,
+  SEED_CAP: 40,
 
   GATHER: {
     berry: { label: 'Hái quả',  res: 'food',  hours: 0.7, perTrip: 2, stock: 4, seeds: 2, regrowDays: 4, skill: 'gather' },
@@ -40,6 +40,7 @@ window.CFG = {
     clearHours: 6,        // giờ công để dọn một ruộng (2×2 ô)
     sowHours: 1,
     seedCost: 3,
+    seedReturn: 4,        // mỗi lần thu hoạch giữ lại 4 hạt giống cho vụ sau
     growDays: 4,          // điểm sinh trưởng cần có (nắng +1/đêm, mưa +1.5/đêm)
     rainGrowth: 1.5,
     sunGrowth: 1,
@@ -153,6 +154,13 @@ window.CFG = {
     studyIdeas: 0.3, smeltHours: 1.5, skillMax: 7,
     soldiersPer: 7, barracksCap: [0, 6, 10, 14], drillXp: 1,
     lawSlots: [1, 1, 2, 2, 3],
+    // Thịnh vượng: ở cấp bộ lạc 5, giới hạn dân số được cộng thêm
+    prosper: { hall: 5, living: 5, on: 0.85, off: 0.7 },
+    // Đoàn buôn: thừa thức ăn/gỗ/đá (≥ 85% kho) thì mang bớt đi đổi lấy thứ làng đang thiếu
+    caravan: { pop: 12, surplus: 0.85, keep: 0.7, foodMax: 160, resMax: 70,
+      value: { food: 1, wood: 1.2, stone: 1.2, seeds: 3, ore: 4, bronze: 14, furs: 6, idea: 12 }, giftRel: 3 },
+    // Đại tiệc mùa màng: kho thức ăn ≥ 92% thì mở tiệc (tốn 15% kho), cách nhau ít nhất 3 ngày
+    feast: { at: 0.92, share: 0.15, every: 3, morale: 6, health: 4 },
   },
   CARE: { healRate: 10, patients: 4, goAt: 45, shamanBonus: 8 }, // Nhà chữa bệnh: người sức khỏe dưới 45 vào nằm chữa, hồi 10/giờ (+8 khi có vu sư chăm)
   GATHER_RATIO: 1.3,       // tỉ lệ gỗ : đá mà làng cố giữ khi đi khai thác

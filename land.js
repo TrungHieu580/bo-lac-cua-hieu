@@ -28,6 +28,39 @@ const LAND = (() => {
     return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
   }
   function targetSize() { return SIZES[clamp(lvl() - 1, 0, SIZES.length - 1)]; }
+  // Bãi săn mới: lần 1 ưu tiên vùng đất mới, trống trơn; lần 2 nới điều kiện — chọn đồng cỏ/rừng bất kỳ xa làng, dọn cây bụi để lấy chỗ
+  function placeHuntzone(fresh, freshSet) {
+    const f0 = WORLD.fire(), ZW = 7, ZH = 5, R = 16 + Math.max(0, Math.floor((S.villagers.length - 6) / 2));
+    const overlapZone = (x, y) => S.objects.some(o => o.type === 'huntzone' && x < o.x + o.w + 2 && x + ZW + 2 > o.x && y < o.y + o.h + 2 && y + ZH + 2 > o.y);
+    const fits = (x, y, relax) => {
+      if (x < 1 || y < 1 || x + ZW > WORLD.W - 1 || y + ZH > WORLD.H - 1) return false;
+      if (Math.hypot(x + ZW / 2 - f0.x, y + ZH / 2 - f0.y) < (relax ? R : 16)) return false;
+      let nf = 0;
+      for (let j = 0; j < ZH; j++) for (let i = 0; i < ZW; i++) {
+        const t = WORLD.ter(x + i, y + j), o = WORLD.objAt(x + i, y + j);
+        if (!(t === 'grass' || t === 'meadow' || t === 'forest')) return false;
+        if (o && !(relax && (o.type === 'tree' || o.type === 'bush'))) return false;
+        if (freshSet.has((x + i) + ',' + (y + j))) nf++;
+      }
+      return (relax || nf >= ZW * ZH * 0.4) && !overlapZone(x, y);
+    };
+    for (let pass = 0; pass < 2; pass++) {
+      for (let k = 0; k < (pass ? 1500 : 600); k++) {
+        let x, y;
+        if (!pass) { const [fx, fy] = fresh[Math.floor(rand() * fresh.length)]; x = fx - Math.floor(rand() * ZW); y = fy - Math.floor(rand() * ZH); }
+        else { x = 1 + Math.floor(rand() * (WORLD.W - ZW - 2)); y = 1 + Math.floor(rand() * (WORLD.H - ZH - 2)); }
+        if (!fits(x, y, pass === 1)) continue;
+        for (let j = 0; j < ZH; j++) for (let i = 0; i < ZW; i++) {
+          const o = WORLD.objAt(x + i, y + j); if (o) WORLD.removeObj(o);
+          WORLD.setTer(x + i, y + j, 'meadow');
+        }
+        WORLD.addObj({ type: 'huntzone', x, y, w: ZW, h: ZH, animals: 3 });
+        return true;
+      }
+    }
+    return false;
+  }
+
   function expandTo(tW, tH) {
     const W = WORLD.W, H = WORLD.H;
     tW = Math.max(W, tW); tH = Math.max(H, tH);
@@ -86,22 +119,7 @@ const LAND = (() => {
     }
     // một bãi săn mới trên đồng cỏ vùng đất mới
     const freshSet = new Set(fresh.map(([x, y]) => x + ',' + y));
-    const f0 = WORLD.fire(), ZW = 7, ZH = 5;
-    for (let k = 0; k < 600; k++) {
-      const [fx, fy] = fresh[Math.floor(rand() * fresh.length)];
-      const x = fx - Math.floor(rand() * ZW), y = fy - Math.floor(rand() * ZH);
-      if (Math.hypot(x + ZW / 2 - f0.x, y + ZH / 2 - f0.y) < 16) continue;
-      let ok = true, nf = 0;
-      for (let j = 0; j < ZH && ok; j++) for (let i = 0; i < ZW && ok; i++) {
-        const t = WORLD.ter(x + i, y + j);
-        if (!(t === 'grass' || t === 'meadow' || t === 'forest') || WORLD.objAt(x + i, y + j)) ok = false;
-        if (freshSet.has((x + i) + ',' + (y + j))) nf++;
-      }
-      if (!ok || nf < ZW * ZH * 0.4 || S.objects.some(o => o.type === 'huntzone' && x < o.x + o.w + 2 && x + ZW + 2 > o.x && y < o.y + o.h + 2 && y + ZH + 2 > o.y)) continue;
-      for (let j = 0; j < ZH; j++) for (let i = 0; i < ZW; i++) WORLD.setTer(x + i, y + j, 'meadow');
-      WORLD.addObj({ type: 'huntzone', x, y, w: ZW, h: ZH, animals: 3 });
-      break;
-    }
+    if (fresh.length) placeHuntzone(fresh, freshSet);
     WORLD.rebuild();
     SIM.unstickAll();
     if (typeof RENDER !== 'undefined') {

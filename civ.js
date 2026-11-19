@@ -320,7 +320,7 @@ const CIV = (() => {
       }
       if (c.target === 'far') {
         add('stone', 40); add('ore', 10); S.res.seeds = Math.min(CFG.SEED_CAP, S.res.seeds + 10); loot.push('40 đá', '10 quặng', '10 hạt giống');
-        if (S.villagers.length < EXP.popLimit() && EXP.beds() > S.villagers.length) { EXP.newcomer(); loot.push('một người theo về'); }
+        if (EXP.hasRoom() && EXP.newcomer()) loot.push('một người theo về');
         if (window.SAGA) SAGA.memory('feet', 'Chinh phục vùng đất xa');
       }
       for (const v of vs) { v.morale = clamp(v.morale + 8, 0, 100); if (rand() < 0.4) addXp(v, 'guard', 8); }
@@ -668,7 +668,91 @@ const CIV = (() => {
     if (S.day < g.safeUntil && S.def) S.def.plan = null;
     // mỏ quặng
     if (has('smelting') && !cnt('oremine')) spawnOre();
+    prosperity();
+    caravan();
+    grandFeast();
     for (const o of objs('oremine')) o.stock = Math.min(CFG.GATHER.ore.stock, o.stock + CFG.GATHER.ore.regen);
+  }
+
+  // ---------------- THỊNH VƯỢNG: nới giới hạn dân số ở cấp 5 ----------------
+  function popBonus() {
+    if (!S.civ || !window.TRB || TRB.level() < 5) return 0;
+    const P = C.prosper;
+    return (cnt('greathall') ? P.hall : 0) + (G().prosper ? P.living : 0);
+  }
+  function prosperity() {
+    const g = G(), P = C.prosper, ls = livingScore();
+    if (!g.prosper && window.TRB && TRB.level() >= 5 && has('masonry') && ls >= P.on) {
+      g.prosper = true;
+      SIM.event(`Bộ lạc thịnh vượng! Nhà cửa, kho lương, nước sạch đều đầy đủ — tiếng lành đồn xa, làng có thể đón thêm ${P.living} người.`);
+      EV.emit('toast', `Thịnh vượng: giới hạn dân số +${P.living}`);
+    } else if (g.prosper && ls < P.off) {
+      g.prosper = false;
+      SIM.event('Hạ tầng xuống cấp, làng không còn thịnh vượng như trước — giới hạn dân số giảm lại.');
+    }
+  }
+
+  // ---------------- ĐOÀN BUÔN: đổi đồ thừa lấy đồ thiếu ----------------
+  function caravanWants(gk) {
+    const out = [], cap = (k) => SIM.cap(k), sg = S.saga;
+    const waiting = S.objects.filter(o => o.type === 'plot' && (o.state === 'wild' || (o.state === 'cleared' && !o.seeded && o.yieldLeft <= 0))).length;
+    if (S.res.seeds < Math.min(CFG.SEED_CAP - 5, 6 + waiting * CFG.FARM.seedCost)) out.push(['seeds', CFG.SEED_CAP - S.res.seeds, 'hạt giống']);
+    if (has('smelting') && S.res.ore < 30) out.push(['ore', 40 - S.res.ore, 'quặng']);
+    if (sg && sg.furs < CFG.SEASONS.furCap * 0.6) out.push(['furs', Math.round(CFG.SEASONS.furCap * 0.8 - sg.furs), 'áo lông']);
+    for (const k of ['stone', 'wood']) if (k !== gk && S.res[k] < cap(k) * 0.5) out.push([k, Math.round(cap(k) * 0.7 - S.res[k]), k === 'stone' ? 'đá' : 'gỗ']);
+    if (cnt('smelter') && (S.res.bronze || 0) < 10) out.push(['bronze', 10 - (S.res.bronze || 0), 'đồng thỏi']);
+    if (sg && window.SAGA && SAGA.INV.some(i => !sg.inv[i.id])) out.push(['idea', 6, 'ý tưởng']);
+    return out;
+  }
+  function caravan() {
+    const K = C.caravan, nb = S.saga && S.saga.nb;
+    if (!nb || !nb.met || nb.rel < CFG.NEIGHBOR.raidBelow || S.villagers.length < K.pop) return;
+    const give = ['food', 'wood', 'stone'].filter(k => S.res[k] >= SIM.cap(k) * K.surplus).sort((a, b) => S.res[b] / SIM.cap(b) - S.res[a] / SIM.cap(a));
+    const deals = [], spare = [];
+    for (const gk of give.slice(0, 2)) {
+      const wants = caravanWants(gk); if (!wants.length) { spare.push(gk); continue; }
+      const [wk, room, wname] = wants[0];
+      const amt = Math.min(Math.floor(S.res[gk] - SIM.cap(gk) * K.keep), gk === 'food' ? K.foodMax : K.resMax);
+      if (amt < 10 || room <= 0) continue;
+      const getN = Math.min(room, Math.floor(amt * K.value[gk] / K.value[wk]));
+      if (getN < 1) continue;
+      const pay = Math.ceil(getN * K.value[wk] / K.value[gk]);
+      S.res[gk] -= pay;
+      if (wk === 'furs') S.saga.furs += getN;
+      else if (wk === 'idea') SAGA.addIdeas(getN);
+      else S.res[wk] = (S.res[wk] || 0) + getN;
+      deals.push(`${pay} ${gk === 'food' ? 'thức ăn' : gk === 'wood' ? 'gỗ' : 'đá'} → ${getN} ${wname}`);
+    }
+    // không còn gì cần đổi: mang quà biếu để thắt chặt tình thân (tới khi kết minh)
+    const RN = { food: 'thức ăn', wood: 'gỗ', stone: 'đá' };
+    let gift = '';
+    if (spare.length && nb.rel < CFG.NEIGHBOR.allyAt + 10) {
+      const gk = spare[0], pay = Math.min(Math.floor(S.res[gk] - SIM.cap(gk) * K.keep), gk === 'food' ? 60 : 40);
+      if (pay >= 10) { S.res[gk] -= pay; nb.rel = clamp(nb.rel + K.giftRel, 0, 100); gift = `${pay} ${RN[gk]}`; }
+    }
+    if (!deals.length && !gift) return;
+    G().caravans = (G().caravans || 0) + 1;
+    nb.rel = clamp(nb.rel + 2, 0, 100);
+    SIM.log(`Đoàn buôn sang ${NBN()}${deals.length ? ` đổi đồ thừa: ${deals.join(', ')}` : ''}${gift ? `${deals.length ? ';' : ''} biếu ${gift} làm quà (quan hệ ${Math.round(nb.rel)})` : ''}.`, 'ev');
+    if (!nb.ally && nb.rel >= CFG.NEIGHBOR.allyAt) {
+      nb.ally = true;
+      S.villagers.forEach(v => v.morale = clamp(v.morale + 6, 0, 100));
+      SIM.event(`Nhờ những chuyến đoàn buôn và quà biếu, ${NBN()} kết minh với bộ lạc của Hiếu!`);
+      EV.emit('toast', `🤝 Kết minh với ${NBN()}!`);
+    }
+  }
+  // Đại tiệc mùa màng: kho thức ăn gần đầy thì mở tiệc lớn — tinh thần, sức khỏe, tình thân đều tăng
+  function grandFeast() {
+    const g = G(), cap = SIM.cap('food');
+    if (S.res.food < cap * C.feast.at || S.villagers.length < 15 || S.day - (g.lastFeast || 0) < C.feast.every) return;
+    g.lastFeast = S.day; g.feasts = (g.feasts || 0) + 1;
+    const cost = Math.round(cap * C.feast.share);
+    S.res.food -= cost;
+    const ad = adults();
+    S.villagers.forEach(v => { v.morale = clamp(v.morale + C.feast.morale, 0, 100); v.health = clamp(v.health + C.feast.health, 0, 100); });
+    for (let k = 0; k < ad.length; k++) { const a = pick(ad), b = pick(ad); if (a !== b) a.bonds[b.id] = b.bonds[a.id] = Math.min(100, (a.bonds[b.id] || 0) + 4); }
+    SIM.event(`Đại tiệc mùa màng! Kho đầy ắp nên cả làng mở tiệc linh đình (−${cost} thức ăn): tinh thần +${C.feast.morale}, sức khỏe +${C.feast.health}, mọi người thêm gắn bó.`);
+    EV.emit('toast', 'Đại tiệc mùa màng — cả làng no say!');
   }
 
   // ---------------- GIAO DIỆN ----------------
@@ -727,6 +811,8 @@ const CIV = (() => {
     const bar = (r) => `<span class="civ-bar"><i style="width:${Math.round(Math.min(1, r) * 100)}%;background:${r >= 1 ? '#7bc043' : r >= 0.8 ? '#e0b030' : '#d9534f'}"></i></span>`;
     const ns = needs();
     setHTML(p, 'civ-infra', `<div>Mức sống: <b>${Math.round(livingScore() * 100)}%</b> — đủ hết thì mỗi đêm tinh thần +2, thiếu thì giảm.</div>` + ns.map(x => `<div class="civ-need">${bar(x.ratio)} <b>${x.name}</b> ${Math.round(x.have)}/${Math.round(x.need)}${x.ratio < 1 ? ` <small>— ${x.hint}</small>` : ''}</div>`).join('') +
+      `<div>Giới hạn dân số: <b>${EXP.popNow()}/${EXP.popLimit()}</b>${popBonus() ? ` (thịnh vượng +${popBonus()})` : (window.TRB && TRB.level() >= 5 ? ` — cấp 5: xây Đại sảnh (+${C.prosper.hall}) và giữ mức sống ≥ ${Math.round(C.prosper.on * 100)}% khi đã biết xây đá (+${C.prosper.living}) để đón thêm người` : '')}.</div>` +
+      `<div>Đoàn buôn: khi thức ăn, gỗ hoặc đá đầy trên ${Math.round(C.caravan.surplus * 100)}% kho, mỗi đêm làng mang bớt sang ${NBN()} đổi lấy thứ đang thiếu (hạt giống, quặng, áo lông, đồng…); không thiếu gì thì biếu quà để kết minh${g.caravans ? ` · đã đi ${g.caravans} chuyến` : ''}. Kho thức ăn trên ${Math.round(C.feast.at * 100)}% thì mở Đại tiệc mùa màng${g.feasts ? ` (đã mở ${g.feasts} lần)` : ''}.</div>` +
       `<div>Công trình đã nâng cấp: ${S.objects.filter(o => tier(o) === 2).length} cấp 2, ${S.objects.filter(o => tier(o) === 3).length} cấp 3${S.objects.find(o => o.civup) ? ` · đang nâng cấp ${tname(S.objects.find(o => o.civup))}` : ''}. ${tierLock(2) ? `Cấp 2: ${tierLock(2)}.` : ''} ${tierLock(3) ? `Cấp 3: ${tierLock(3)}.` : ''}</div>`);
     const sl = lawSlots();
     setHTML(p, 'civ-law', `<div>Kỷ luật: <b>${g.disc}</b> (${discName(g.disc)}) → hướng tới ${discTarget()} · làm việc ${g.disc >= 50 ? '+' : ''}${Math.round((g.disc - 50) / 6)}%, quân đội mạnh hơn khi kỷ luật cao.</div><div>Đang ban hành ${g.laws.length}/${sl} luật${S.auto ? ' (khi bật Tự động, làng tự chọn luật cho ô trống mới)' : ''}:</div>` +
@@ -866,7 +952,7 @@ const CIV = (() => {
   }
 
   return {
-    migrate, awayIds, TIERED, tier, tname, bedsOf, sumBeds, foodCap, kitchenBonus, penCap, skillCap, needs, livingScore, roadMult, shift,
+    migrate, awayIds, popBonus, TIERED, tier, tname, bedsOf, sumBeds, foodCap, kitchenBonus, penCap, skillCap, needs, livingScore, roadMult, shift,
     fightMult, armorMult, workMult, reserved, title, bedtimeHour, autoJobs, wantBuild, options, handles, check, assign, planJob, task, planChild,
     jobText, WORK_POSE, tick, overnight, addActions, objActions, panelHTML, updatePanel, drawObj, hutSprite, pushDraw, SPR, DESC, ITEMS, LAWS, TARGETS,
     strengthOf, startCampaign, toggleLaw, spawnOre,

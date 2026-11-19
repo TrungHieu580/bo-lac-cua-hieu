@@ -104,6 +104,10 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Ngành nghề:** học giả, thợ rèn, thầy dạy nghề, chiến binh (làng tự cử theo dân số). Trường dạy nghề: trẻ con đi học; làm việc lâu thì lên kinh nghiệm, kỹ năng tới bậc 6–7 (bậc thầy) khi trường được nâng cấp.
 - **Luật lệ & kỷ luật:** Chia đều thức ăn, Kính lão & truyền nghề, Lao động chung, Tế lễ định kỳ, Nghĩa vụ quân sự, Giờ giới nghiêm — mỗi luật có lợi có hại; số luật tăng theo cấp bộ lạc. Kỷ luật (0–100) ảnh hưởng tốc độ làm việc và sức chiến đấu; quá thấp thì dân cãi nhau.
 - **Quân đội:** Doanh trại (6/10/14 chiến binh), chiến binh luyện tập mỗi ngày, tự ra trận khi có thú dữ/đột kích; trang bị giáo đồng, cung, giáp. **Hành quân** (chạm doanh trại): diệt hang thú dữ (làng yên ổn 5 ngày), tấn công trại Bộ lạc Đá Đỏ (họ thần phục và nộp cống mỗi ngày), chinh phục vùng đất xa (đá, quặng, hạt giống, người theo về).
+- **Thịnh vượng:** ở bộ lạc cấp 5, xây Đại sảnh tù trưởng (+5) và giữ mức sống từ 85% trở lên khi đã biết Xây đá (+5) — giới hạn dân số tăng từ 40 lên tối đa 50.
+- **Đoàn buôn:** thức ăn, gỗ hoặc đá đầy trên 85% kho thì mỗi đêm làng mang bớt sang Bộ lạc Đá Đỏ đổi lấy thứ đang thiếu (hạt giống, quặng, áo lông, đồng thỏi, ý tưởng); không thiếu gì thì biếu quà cho tới khi kết minh.
+- **Đại tiệc mùa màng:** kho thức ăn trên 92% thì mở tiệc lớn (tốn 15% kho, cách nhau ít nhất 3 ngày): tinh thần +6, sức khỏe +4, dân làng thêm gắn bó.
+- **Sửa lỗi:** dân số tính cả người đang thám hiểm/hành quân và em bé sắp sinh nên không còn vượt giới hạn; mỗi lần thu hoạch giữ lại 4 hạt giống (sức chứa hạt 40) nên ruộng không còn bỏ trống vì thiếu hạt; bản đồ mở rộng luôn có bãi săn mới (nếu vùng đất mới chật thì chọn đồng cỏ/rừng khác xa làng và dọn cây bụi).
 
 ## Đất đai mở rộng (land.js)
 
