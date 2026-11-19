@@ -35,7 +35,7 @@ const TRB = (() => {
   const reserved = (v) => { const r = roleOf(v); return r === 'prophet' || r === 'shaman'; };
   const isRole = (v) => !!roleOf(v);
   const holder = (r) => S.roles && S.roles[r] ? SIM.vById(S.roles[r]) : null;
-  function title(v) { const r = roleOf(v); return r ? ROLE_NAME[r] : CFG.SKILL_NAMES[v.main]; }
+  function title(v) { const r = roleOf(v); if (!r && window.CIV && S.civ) { const t = CIV.title(v); if (t) return t; } return r ? ROLE_NAME[r] : CFG.SKILL_NAMES[v.main]; }
 
   // ---------------- NÂNG CẤP LỬA TRẠI ----------------
   function fireCost() { const n = next(); return n ? { wood: n.wood, stone: n.stone, hours: n.hours } : { wood: 999, stone: 999, hours: 99 }; }

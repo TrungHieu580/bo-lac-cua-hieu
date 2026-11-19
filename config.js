@@ -31,6 +31,7 @@ window.CFG = {
     berry: { label: 'Hái quả',  res: 'food',  hours: 0.7, perTrip: 2, stock: 4, seeds: 2, regrowDays: 4, skill: 'gather' },
     wood:  { label: 'Đốn gỗ',   res: 'wood',  hours: 1.2, perTrip: 3, stock: 9, skill: 'build' },
     stone: { label: 'Nhặt đá',  res: 'stone', hours: 1.2, perTrip: 3, stock: 12, skill: 'build' },
+    ore:    { label: 'Đào quặng', res: 'ore', hours: 1.4, perTrip: 2, stock: 24, regen: 6, skill: 'build' },
     quarry: { label: 'Khai thác đá', res: 'stone', hours: 1.4, perTrip: 4, stock: 40, skill: 'build', regen: 16 },
     fish:  { label: 'Câu cá',   res: 'food',  hours: 1.0, perTrip: 3, stock: 9, skill: 'gather', regen: 4 },
   },
@@ -109,6 +110,11 @@ window.CFG = {
     temple:    { name: 'Đền tổ tiên',        w: 4, h: 3, wood: 80,  stone: 120, hours: 40, unlock: 0, tribe: 3, max: 1, grand: true },
     stonering: { name: 'Vòng đá thiêng',     w: 4, h: 4, wood: 40,  stone: 200, hours: 55, unlock: 0, tribe: 4, max: 1, grand: true },
     paintwall: { name: 'Vách đá vẽ tranh', w: 3, h: 2, wood: 4,  stone: 15, hours: 8,  unlock: 8, max: 1 },
+    well:      { name: 'Giếng nước',       w: 2, h: 2, wood: 4,  stone: 12, hours: 6,  unlock: 10 },
+    scholar:   { name: 'Nhà hiền triết',   w: 3, h: 2, wood: 16, stone: 18, hours: 14, unlock: 12, max: 2 },
+    school:    { name: 'Trường dạy nghề',  w: 3, h: 2, wood: 18, stone: 14, hours: 14, unlock: 14, max: 1 },
+    barracks:  { name: 'Doanh trại',       w: 4, h: 3, wood: 26, stone: 22, hours: 20, unlock: 16, max: 2 },
+    smelter:   { name: 'Lò luyện',         w: 2, h: 2, wood: 10, stone: 24, hours: 12, unlock: 0, max: 1, invent: 'smelting' },
     greathall: { name: 'Đại sảnh tù trưởng', w: 5, h: 3, wood: 200, stone: 150, hours: 70, unlock: 0, tribe: 5, max: 1, grand: true, beds: 12 },
   },
 
@@ -140,6 +146,14 @@ window.CFG = {
   PETS: { pupChance: 0.35, growDays: 4, maxDogs: 4, dogFight: 1.4, dogHunt: 0.08, horseChance: 0.25, horseLevel: 2, tameHours: 3, tameChance: 0.5, horseHunt: 0.08, maxHorses: 3 },
   INVENT: { perAdults: 5 },
   NEIGHBOR: { name: 'Bộ lạc Đá Đỏ', start: 40, meetDay: 6, visitChance: 0.3, raidBelow: 25, giftFood: 20, giftRel: 12, tradeRel: 5, allyAt: 75 },
+  // ---- Văn minh: cấp công trình, hạ tầng, nghiên cứu, luyện chế, ngành nghề, luật lệ, quân đội ----
+  CIV: {
+    tier2: { pop: 12, level: 2 }, tier3: { pop: 22, level: 4, invent: 'masonry' },
+    wellServes: 12, roadSpeed: 1.3, paveStone: 1,
+    studyIdeas: 0.3, smeltHours: 1.5, skillMax: 7,
+    soldiersPer: 7, barracksCap: [0, 6, 10, 14], drillXp: 1,
+    lawSlots: [1, 1, 2, 2, 3],
+  },
   CARE: { healRate: 10, patients: 4, goAt: 45, shamanBonus: 8 }, // Nhà chữa bệnh: người sức khỏe dưới 45 vào nằm chữa, hồi 10/giờ (+8 khi có vu sư chăm)
   GATHER_RATIO: 1.3,       // tỉ lệ gỗ : đá mà làng cố giữ khi đi khai thác
 

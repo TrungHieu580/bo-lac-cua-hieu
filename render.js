@@ -108,6 +108,8 @@ const RENDER = (() => {
     if (t.kind === 'heal' || t.kind === 'healHouse' || t.kind === 'cook') return 'work';
     if (window.SAGA && SAGA.WORK_POSE.includes(t.kind)) return 'work';
     if (window.LAND && LAND.WORK_POSE.includes(t.kind)) return 'work';
+    if (window.CIV && CIV.WORK_POSE.includes(t.kind)) return 'work';
+    if (t.kind === 'study' || t.kind === 'teach' || t.kind === 'learn') return 'sit';
     if (t.kind === 'ritual') return 'walk';
     if (t.kind === 'sit' || t.kind === 'rest' || t.kind === 'sleepout') return 'sit';
     return 'stand';
@@ -205,7 +207,7 @@ const RENDER = (() => {
           else lx.drawImage(fs, X, Y - 2);
           if (window.TRB) TRB.drawFireFront(lx, X, Y, time, out ? null : fs);
         }]); break;
-        case 'hut': list.push([foot, () => lx.drawImage(ART.SPR.hut, X, Y + 2 * T - 52)]); break;
+        case 'hut': list.push([foot, () => lx.drawImage((window.CIV && CIV.hutSprite(o)) || ART.SPR.hut, X, Y + 2 * T - 52)]); break;
         case 'site': list.push([foot, () => {
           const p = Math.min(1, o.progress / o.need);
           const spr = EXP.spriteFor(o.kind || 'hut');
@@ -240,6 +242,7 @@ const RENDER = (() => {
     if (window.VIL) VIL.pushDraw(list, lx, L, Tp, time, shadow);
     if (window.SAGA) SAGA.pushDraw(list, lx, L, Tp, time, shadow);
     if (window.LAND) LAND.pushDraw(list, lx, L, Tp);
+    if (window.CIV) CIV.pushDraw(list, lx, L, Tp, time);
     list.sort((a, b) => a[0] - b[0]);
     for (const [, f] of list) f();
 
@@ -290,7 +293,7 @@ const RENDER = (() => {
       if (v.carry && !ghost) {
         if (v.carry.vis === 'fish') EXP.drawFishCarry(lx, X, Y);
         else {
-          const vis = v.carry.vis === 'meat' ? { meat: 1 } : v.carry.vis === 'wood' ? { wood: 1 } : v.carry.vis === 'stone' ? { stone: 1 } : { food: 1 };
+          const vis = v.carry.vis === 'meat' ? { meat: 1 } : v.carry.vis === 'wood' ? { wood: 1 } : (v.carry.vis === 'stone' || v.carry.vis === 'ore') ? { stone: 1 } : { food: 1 };
           ART.drawCarry(lx, X, Y, vis);
         }
       }

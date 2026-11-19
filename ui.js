@@ -229,6 +229,7 @@ const UI = (() => {
     const r = actionsFor0(p);
     if (window.LAY) LAY.addMoveAction(p, r);
     if (window.LAND) LAND.addActions(p, r);
+    if (window.CIV) CIV.addActions(p, r);
     return r;
   }
   function actionsFor0(p) {
@@ -506,6 +507,9 @@ const UI = (() => {
         <li><b>Nhà chữa bệnh:</b> người có sức khỏe dưới 45 tự vào nằm chữa (dấu cộng xanh trên mái), hồi nhanh, vu sư tới chăm thì càng nhanh.</li>
         <li><b>Nhà bếp</b> (7 dân): một người nấu ăn mỗi chiều, bữa tối tiết kiệm thức ăn và bổ dưỡng hơn. <b>Chuồng thú</b> (9 dân): nuôi dê — có người chăn thả mỗi sáng thì dê cho sữa, sinh con; coi chừng sói vồ dê!</li>
         <li><b>Công trình đồ sộ:</b> Đền tổ tiên (bộ lạc cấp 3), Vòng đá thiêng (cấp 4), Đại sảnh tù trưởng (cấp 5) — tốn nhiều gỗ đá, cả làng góp sức nhiều ngày, đổi lại lợi ích lớn.</li>
+        <li><b>Hạ tầng theo dân số:</b> bảng <b>Tự động</b> có chỉ số nhà ở, kho, nước sạch, chữa bệnh, phòng thủ, tâm linh, học tập, đường lát đá — đủ thì cả làng vui, thiếu thì giảm tinh thần (thiếu nước còn sinh bệnh). Chạm vào công trình → <b>Nâng cấp</b>: lều cỏ → nhà gỗ → nhà đá, kho, bếp, xưởng, chòi canh, doanh trại... đều có 3 cấp; làng tự nâng cấp khi dư vật liệu.</li>
+        <li><b>Nghiên cứu & luyện chế:</b> Nhà hiền triết (học giả nghĩ ra ý tưởng), phát minh Luyện quặng mở mỏ quặng đồng và Lò luyện; thợ rèn ở Xưởng chế tác làm giáo đồng, cung tên, giáp da, thuốc, công cụ, chum gốm.</li>
+        <li><b>Ngành nghề, luật lệ, quân đội:</b> làng tự cử học giả, thợ rèn, thầy dạy nghề, chiến binh; Trường dạy nghề cho trẻ con đi học, kỹ năng lên tới bậc 7. Tù trưởng ban hành luật (bảng Tự động) — kỷ luật cao thì làm nhanh, đánh giỏi. Doanh trại luyện quân, chạm doanh trại để <b>Hành quân</b>: diệt hang thú, chinh phạt bộ lạc lân cận, chinh phục vùng đất xa.</li>
         <li><b>Đất đai mở rộng:</b> mỗi lần lửa trại lên cấp, bản đồ nới rộng ra mọi phía (48×36 → 80×60 ô) với rừng, đồng cỏ, đồi đá và bãi săn mới. Khi chọn chỗ xây, vòng gạch vàng là ranh giới đất làng (rộng dần theo dân số và cấp bộ lạc). Chạm cây → <b>Khai hoang</b> để đốn cây, đào gốc thành bãi cỏ trống vĩnh viễn; làng tự khai hoang khi hết chỗ. Chạm vào sông → <b>Bắc cầu</b> (4 gỗ + 1 đá mỗi ô) để sang bờ bên kia.</li>
         <li><b>Tự sắp xếp làng:</b> mở <b>Xây dựng</b> → <b>Sắp xếp</b> để gom công trình cùng loại vào từng khu (kho & chế biến, nhà ở, chữa bệnh, tâm linh, chăn nuôi, chòi canh) và xếp ruộng liền nhau thành một cánh đồng. Không ưng thì bấm <b>Hoàn tác</b>.</li>
         <li><b>Di chuyển công trình & ruộng:</b> chạm vào lều, kho, chuồng, đền, ruộng... → <b>Di chuyển</b>, rồi chạm chỗ mới và bấm <b>Chuyển</b> (miễn phí, chuyển ngay). Nút <b>Lưới: Bật/Tắt</b> để hít vào lưới cho thẳng hàng hoặc đặt tự do (máy tính: giữ Shift khi chạm).</li>

@@ -56,6 +56,14 @@ const QST = (() => {
     { id: 'paint8',    t: 'Vẽ 8 bức tranh lên vách đá',      cur: () => sg(g => g.mem.filter(m => m.p).length), need: 8, r: { buff: [1.1, 3], morale: 8 } },
     { id: 'horse1',    t: 'Thuần phục ngựa hoang',          cur: () => sg(g => g.horses),        need: 1,   r: { skill: ['hunt', 'best'], food: 20 } },
     { id: 'era2',      t: 'Bước sang Thời đồ đá mới',        cur: () => sg(g => g.era),           need: 2,   r: { wood: 40, stone: 30 } },
+    { id: 'tier2',     t: 'Nâng cấp một công trình lên cấp 2', cur: () => S.objects.filter(o => (o.tier || 1) >= 2).length, need: 1, r: { wood: 20, stone: 15 } },
+    { id: 'well1',     t: 'Xây giếng nước',                 cur: () => cnt('well'),              need: 1,   r: { health: 10, morale: 5 } },
+    { id: 'scholar1',  t: 'Có học giả nghiên cứu',          cur: () => S.villagers.filter(v => v.prof === 'scholar').length, need: 1, r: { seeds: 8, morale: 5 } },
+    { id: 'bronze1',   t: 'Luyện được đồng thỏi đầu tiên',  cur: () => (S.civ ? S.civ.bronzeMade : 0), need: 1, r: { stone: 30, wood: 20 } },
+    { id: 'army5',     t: 'Có quân đội 5 chiến binh',       cur: () => S.villagers.filter(v => v.prof === 'soldier').length, need: 5, r: { spears: 5, skill: ['guard', 'guards'] } },
+    { id: 'law2',      t: 'Ban hành 2 luật lệ',             cur: () => (S.civ ? S.civ.laws.length : 0), need: 2, r: { morale: 8 } },
+    { id: 'win1',      t: 'Thắng một trận hành quân',       cur: () => (S.civ ? S.civ.wins : 0), need: 1, r: { food: 40, morale: 10 } },
+    { id: 'tier3',     t: 'Xây ngôi nhà đá (cấp 3)',         cur: () => S.objects.filter(o => (o.tier || 1) >= 3).length, need: 1, r: { buff: [1.1, 3], morale: 10 } },
     { id: 'era3',      t: 'Bước sang Thời đồ đồng',          cur: () => sg(g => g.era),           need: 3,   r: { buff: [1.15, 5], morale: 15, health: 15 } },
   ];
   const SKN = () => CFG.SKILL_NAMES;

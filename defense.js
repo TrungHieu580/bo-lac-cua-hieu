@@ -29,7 +29,7 @@ const DEF = (() => {
     for (const [p, k] of D.guardsAt) if (S.villagers.length >= p) n = k;
     return n;
   }
-  const isGuard = (v) => v.job && v.job.type === 'guard';
+  const isGuard = (v) => v.job && (v.job.type === 'guard' || v.job.type === 'drill');
   const healthy = (v) => !v.child && !v.resting && !v.pregnant && v.health >= CFG.HEALTH.sickAt + 5 && !v.inside;
   const isDefender = (v) => healthy(v) && (isGuard(v) || v._defend);
   const live = () => S.beasts.filter(b => b.state !== 'flee');
@@ -151,7 +151,7 @@ const DEF = (() => {
   function hitVillager(v, b) {
     const K = BT[b.kind];
     const armed = ARMED.has(v.id) && v.task && v.task.kind === 'fight';
-    const dmg = Math.round(K.dmg * (armed ? 0.7 : 1) * (1 - 0.06 * (v.skills.guard || 1)) * (0.8 + rand() * 0.4));
+    const dmg = Math.round(K.dmg * (armed ? 0.7 : 1) * Math.max(0.5, 1 - 0.06 * (v.skills.guard || 1)) * (0.8 + rand() * 0.4) * (window.CIV ? CIV.armorMult(v) : 1));
     v.health = clamp(v.health - dmg, 1, 100);
     EV.emit('float', { x: v.x, y: v.y - 24, text: `−${dmg}`, icon: 'heart' });
     if (!v._bitten || v._bitten < S.hour - 1) { v._bitten = S.hour; SIM.event(`${v.name} bị ${K.name.toLowerCase()} tấn công (−${dmg} sức khỏe).`); }
@@ -375,6 +375,7 @@ const DEF = (() => {
         if (towers().some(o => Math.hypot((o.x + 1) * T - b.x, (o.y + 1) * T - b.y) < D.towerRange * T)) mult *= D.towerBonus;
         if (b.warned) mult *= CFG.ROLES.warnedBonus;
         if (window.SAGA) mult *= SAGA.fightMult();
+        if (window.CIV) mult *= CIV.fightMult(v);
         b.hp -= (D.baseDmg + D.perSkill * (v.skills.guard || 1)) * mult * dt;
         b.hit = 0.12;
         v.energy = clamp(v.energy - E.workDrain * 1.2 * dt, 0, 100);
@@ -437,7 +438,7 @@ const DEF = (() => {
     const want = guardsWanted();
     let have = S.villagers.filter(v => isGuard(v) && !v.child).length;
     if (have >= want) return;
-    const cand = S.villagers.filter(v => !v.child && !v.pregnant && !v.resting && !isGuard(v) && !(window.TRB && TRB.isRole(v)) && !(v.job && !v.job.auto) && !(v.job && v.job.type === 'hunt') && !(v.task && v.task.kind === 'work'))
+    const cand = S.villagers.filter(v => !v.child && !v.pregnant && !v.resting && !isGuard(v) && !v.prof && !(window.TRB && TRB.isRole(v)) && !(v.job && !v.job.auto) && !(v.job && v.job.type === 'hunt') && !(v.task && v.task.kind === 'work'))
       .sort((a, b) => (b.skills.guard + (b.main === 'guard' ? 2 : 0)) - (a.skills.guard + (a.main === 'guard' ? 2 : 0)));
     for (const v of cand) {
       if (have >= want) break;

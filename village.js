@@ -95,7 +95,7 @@ const VIL = (() => {
   function afterMeal() {
     if (!S.vil || !kitchen() || S.vil.cookToday < KC.needHours || !S.today.eaten) return;
     if (window.SAGA && SAGA.fireOut()) { SIM.log('Lửa đã tắt nên Nhà bếp không thể nấu chín bữa tối.'); return; }
-    const save = Math.floor(S.today.eaten * KC.save);
+    const save = Math.floor(S.today.eaten * (KC.save + (window.CIV ? CIV.kitchenBonus() : 0)));
     S.res.food = Math.min(SIM.cap('food'), S.res.food + save);
     S.today.eaten -= save;
     S.villagers.forEach(v => { if (v.fedToday) { v.health = clamp(v.health + KC.health, 0, 100); v.morale = clamp(v.morale + KC.morale, 0, 100); } });
@@ -105,7 +105,8 @@ const VIL = (() => {
 
   // ---------------- CHĂN NUÔI ----------------
   function huntCapture() {
-    const p = pens().find(o => o.animals < PN.cap);
+    const cap = (o) => (window.CIV ? CIV.penCap(o) : PN.cap);
+    const p = pens().find(o => o.animals < cap(o));
     if (!p || rand() >= PN.capture) return;
     p.animals++; S.vil.animalsTotal++;
     SIM.event('Nhóm săn bắt sống được một con dê rừng, đưa về Chuồng thú.');
@@ -134,8 +135,9 @@ const VIL = (() => {
       if (!(p.animals > 0)) continue;
       if (herded) {
         milk += Math.floor(p.animals / PN.milkPer);
-        if (p.animals >= 2 && p.animals < PN.cap && rand() < PN.breed) { p.animals++; S.vil.born++; S.vil.animalsTotal++; SIM.log('Một chú dê con vừa ra đời trong Chuồng thú.', 'ev'); }
-        if (p.animals >= PN.cap && S.res.food < SIM.cap('food') - PN.meat) { p.animals--; S.res.food = Math.min(SIM.cap('food'), S.res.food + PN.meat); SIM.log(`Chuồng đã đầy, làng mổ một con dê béo (+${PN.meat} thịt).`); }
+        const pc = window.CIV ? CIV.penCap(p) : PN.cap;
+        if (p.animals >= 2 && p.animals < pc && rand() < PN.breed) { p.animals++; S.vil.born++; S.vil.animalsTotal++; SIM.log('Một chú dê con vừa ra đời trong Chuồng thú.', 'ev'); }
+        if (p.animals >= pc && S.res.food < SIM.cap('food') - PN.meat) { p.animals--; S.res.food = Math.min(SIM.cap('food'), S.res.food + PN.meat); SIM.log(`Chuồng đã đầy, làng mổ một con dê béo (+${PN.meat} thịt).`); }
       } else if (rand() < PN.escape) { p.animals--; SIM.log('Không ai chăn thả, một con dê sổng chuồng chạy vào rừng.'); }
     }
     if (milk) { S.res.food = Math.min(SIM.cap('food'), S.res.food + milk); SIM.log(`Đàn dê cho ${milk} phần sữa.`); }
@@ -170,7 +172,7 @@ const VIL = (() => {
   };
   function objActions(o) {
     if (o.type === 'kitchen') return { title: 'Nhà bếp', desc: `${DESC.kitchen} Hôm nay đã nấu ${Math.round(S.vil.cookToday * 10) / 10}/${KC.needHours} giờ.`, actions: [{ spec: { type: 'cook' }, label: 'Nấu ăn', detail: `Người được chọn nấu ăn ở bếp tới khi đủ ${KC.maxHours} giờ trong ngày` }] };
-    if (o.type === 'pen') return { title: `Chuồng thú — ${o.animals || 0}/${PN.cap} con dê`, desc: `${DESC.pen} Hôm nay đã chăn thả ${Math.round(S.vil.herdToday * 10) / 10} giờ.`, actions: [{ spec: { type: 'herd', target: o.id }, label: 'Chăn thả', detail: 'Dắt dê đi ăn, dọn chuồng — cần ít nhất 1 giờ mỗi ngày' }] };
+    if (o.type === 'pen') return { title: `Chuồng thú — ${o.animals || 0}/${window.CIV ? CIV.penCap(o) : PN.cap} con dê`, desc: `${DESC.pen} Hôm nay đã chăn thả ${Math.round(S.vil.herdToday * 10) / 10} giờ.`, actions: [{ spec: { type: 'herd', target: o.id }, label: 'Chăn thả', detail: 'Dắt dê đi ăn, dọn chuồng — cần ít nhất 1 giờ mỗi ngày' }] };
     if (B[o.type] && B[o.type].grand) return { title: B[o.type].name, desc: DESC[o.type], actions: [] };
     return null;
   }

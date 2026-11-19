@@ -72,6 +72,7 @@ const LAND = (() => {
     if (S.saga) for (const e of S.saga.exps) if (e.tile) e.tile = [e.tile[0] + dx, e.tile[1] + dy];
     if (S.layUndo) S.layUndo.list.forEach(e => { e.x += dx; e.y += dy; });
     for (const a of S.clearAreas || []) { a.x += dx; a.y += dy; }
+    if (window.CIV) CIV.shift(dx, dy);
     WORLD.rebuild();
     // trang trí vùng đất mới
     const G = CFG.GATHER;

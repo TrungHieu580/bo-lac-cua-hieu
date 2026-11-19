@@ -54,6 +54,7 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 | `render.js` | Camera, vẽ theo bội số nguyên, sắp lớp theo tọa độ chân, ánh sáng ngày đêm, mưa |
 | `ui.js` | Thanh trên và thanh dưới, bảng dân làng, xây dựng, nhật ký, bảng hành động, modal |
 | `main.js` | Vòng lặp game, điều khiển chuột, cảm ứng, bàn phím, tự lưu |
+| `civ.js` | Cấp công trình, hạ tầng theo dân số, nghiên cứu, luyện chế, ngành nghề, luật lệ, quân đội & hành quân |
 | `land.js` | Bản đồ mở rộng theo cấp bộ lạc, khai hoang rừng, bắc cầu, ranh giới đất làng |
 | `saga.js` | Giữ lửa, bốn mùa, voi ma mút, thám hiểm, chó & ngựa, phát minh & thời đại, bộ lạc lân cận, tranh hang |
 
@@ -93,6 +94,16 @@ Hành động theo mục tiêu: bụi quả → **Hái quả**; cây → **Đố
 - **Gia đình:** mỗi người có giới tính. Nam và nữ gắn kết từ 60 sẽ nên duyên vợ chồng. Mỗi cặp vợ chồng được xếp một lều riêng (con nhỏ ngủ cùng cha mẹ); chỉ khi cả hai cùng vào lều riêng ban đêm (trên lều hiện trái tim) thì sáng hôm sau người vợ mới có thể mang thai (3 ngày, làm việc chậm hơn, không đi săn) rồi sinh con. Làng tự xây thêm lều khi số cặp vợ chồng nhiều hơn số lều. Bảng Dân làng ghi bạn đời, đang mang thai, con của ai.
 - **Mở khóa theo dân số:** 7 người — Giàn phơi thịt; 8 — Câu cá (bến cá dọc bờ sông, mỗi đêm cá hồi lại); 9 — Kho lương; 10 — Nhà dài và Lễ hội lửa trại mỗi 7 ngày (tốn thức ăn, tăng mạnh tinh thần và gắn kết); 12 — Lều thảo dược (mọi người hồi thêm sức khỏe mỗi đêm); 14 — Xưởng chế tác (xây dựng, đốn gỗ, nhặt đá nhanh hơn 20%). Dân số tối đa 40.
 - Bản lưu cũ vẫn chơi tiếp được trên bản đồ cũ 36×28 với đầy đủ tính năng mới; chọn **Chơi mới** để có bản đồ lớn.
+
+## Văn minh bộ lạc (civ.js)
+
+- **Cấp công trình:** lều cỏ → nhà gỗ → nhà đá (3/4/5 chỗ ngủ), nhà dài 6/8/10; kho lương, giàn phơi (sức chứa ×1,5/×2), bếp, xưởng, nhà chữa bệnh, lều thảo dược, chòi canh, chuồng thú, giếng, trường, nhà hiền triết, doanh trại, lò luyện đều có 3 cấp với hình vẽ/cờ hiệu riêng. Cấp 2 cần 12 dân hoặc bộ lạc cấp 2; cấp 3 cần phát minh Xây đá và 22 dân hoặc bộ lạc cấp 4. Làng tự nâng cấp khi dư vật liệu, ưu tiên chỗ đang thiếu.
+- **Định mức hạ tầng theo dân số:** nhà ở, kho lương thực, nước sạch (Giếng nước, 12 người/giếng mỗi cấp), chữa bệnh, phòng thủ, tâm linh, học tập, đường lát đá (lát đá đường đất quanh làng, đi nhanh hơn 30%). Đủ hết: tinh thần +2 mỗi đêm; thiếu: tinh thần giảm, thiếu nước thì sinh bệnh. Làng tự xây thêm hạ tầng còn thiếu.
+- **Nghiên cứu:** Nhà hiền triết — học giả nghĩ ra ý tưởng mỗi giờ. 7 phát minh mới: Thảo dược, Xây đá, Luyện quặng, Đội hình chiến đấu, Luật truyền khẩu, Y thuật, Binh pháp.
+- **Luyện chế:** Luyện quặng → mỏ quặng đồng ở đồi đá + Lò luyện (2 quặng + 1 gỗ → 1 đồng thỏi). Thợ rèn ở Xưởng chế tác tự làm thứ đang thiếu: giáo đồng, cung tên, giáp da, thuốc thảo dược, công cụ đồng, chum gốm.
+- **Ngành nghề:** học giả, thợ rèn, thầy dạy nghề, chiến binh (làng tự cử theo dân số). Trường dạy nghề: trẻ con đi học; làm việc lâu thì lên kinh nghiệm, kỹ năng tới bậc 6–7 (bậc thầy) khi trường được nâng cấp.
+- **Luật lệ & kỷ luật:** Chia đều thức ăn, Kính lão & truyền nghề, Lao động chung, Tế lễ định kỳ, Nghĩa vụ quân sự, Giờ giới nghiêm — mỗi luật có lợi có hại; số luật tăng theo cấp bộ lạc. Kỷ luật (0–100) ảnh hưởng tốc độ làm việc và sức chiến đấu; quá thấp thì dân cãi nhau.
+- **Quân đội:** Doanh trại (6/10/14 chiến binh), chiến binh luyện tập mỗi ngày, tự ra trận khi có thú dữ/đột kích; trang bị giáo đồng, cung, giáp. **Hành quân** (chạm doanh trại): diệt hang thú dữ (làng yên ổn 5 ngày), tấn công trại Bộ lạc Đá Đỏ (họ thần phục và nộp cống mỗi ngày), chinh phục vùng đất xa (đá, quặng, hạt giống, người theo về).
 
 ## Đất đai mở rộng (land.js)
 

@@ -221,3 +221,7 @@ img.bi { width: 22px; height: 22px; }
 }
 #t-day { white-space: nowrap; }
 @media (max-width: 480px) { .saga-chip .sn { display: none; } .saga-chip { margin-left: 0; padding: 2px 4px; } }
+/* ---- Văn minh ---- */
+.civ-need { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 0; }
+.civ-bar { display: inline-block; width: 60px; height: 7px; background: rgba(0,0,0,.35); border-radius: 4px; overflow: hidden; flex: none; }
+.civ-bar i { display: block; height: 100%; }

@@ -5,7 +5,7 @@
 const LAY = (() => {
   const T = CFG.TILE;
   const CW = 4, CH = 3; // ô lưới xây dựng (giống expand.js)
-  const MOVABLE = ['storage', 'hut', 'longhouse', 'rack', 'granary', 'healer', 'workshop', 'watchtower', 'sickhouse', 'kitchen', 'pen', 'temple', 'stonering', 'greathall', 'paintwall', 'site', 'plot'];
+  const MOVABLE = ['storage', 'hut', 'longhouse', 'rack', 'granary', 'healer', 'workshop', 'watchtower', 'sickhouse', 'kitchen', 'pen', 'temple', 'stonering', 'greathall', 'paintwall', 'well', 'scholar', 'school', 'barracks', 'smelter', 'site', 'plot'];
   const kindOf = (o) => o.type === 'site' ? (o.kind || 'hut') : o.type;
   function nameOf(o) {
     if (o.type === 'storage') return 'Kho chung';
@@ -20,14 +20,15 @@ const LAY = (() => {
 
   // ---------------- KHU VỰC ----------------
   const GROUPS = {
-    store: { name: 'Khu kho & chế biến', kinds: ['storage', 'rack', 'granary', 'kitchen', 'workshop'] },
-    home: { name: 'Khu nhà ở', kinds: ['hut', 'longhouse'] },
+    store: { name: 'Khu kho & chế biến', kinds: ['storage', 'rack', 'granary', 'kitchen', 'workshop', 'smelter'] },
+    home: { name: 'Khu nhà ở', kinds: ['hut', 'longhouse', 'well'] },
     care: { name: 'Khu chữa bệnh', kinds: ['healer', 'sickhouse'] },
     sacred: { name: 'Khu tâm linh', kinds: ['temple', 'stonering', 'greathall', 'paintwall'] },
     animal: { name: 'Khu chăn nuôi', kinds: ['pen'] },
-    guard: { name: 'Chòi canh', kinds: ['watchtower'] },
+    learn: { name: 'Khu học tập', kinds: ['scholar', 'school'] },
+    guard: { name: 'Chòi canh & doanh trại', kinds: ['watchtower', 'barracks'] },
   };
-  const ORDER = ['store', 'home', 'sacred', 'care', 'animal', 'guard'];
+  const ORDER = ['store', 'home', 'sacred', 'learn', 'care', 'animal', 'guard'];
   const groupOf = (k) => ORDER.find(g => GROUPS[g].kinds.includes(k)) || 'home';
   // tâm của khu (để công trình mới tự xây gần các công trình cùng loại)
   function groupCentroid(k) {

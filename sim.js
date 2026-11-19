@@ -14,7 +14,7 @@ const SIM = (() => {
   const T = CFG.TILE;
   const G = CFG.GATHER;
   const GKEY = { bush: 'berry', tree: 'wood', boulder: 'stone', fishspot: 'fish' };
-  const RES_NAME = { food: 'thức ăn', wood: 'gỗ', stone: 'đá', seeds: 'hạt giống' };
+  const RES_NAME = { food: 'thức ăn', wood: 'gỗ', stone: 'đá', seeds: 'hạt giống', ore: 'quặng' };
   const rand = () => Math.random();
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const names = (vs) => vs.map(v => v.name).join(', ');
@@ -106,7 +106,7 @@ const SIM = (() => {
   }
 
   function stepWalk(v, t, dt) {
-    let remain = CFG.WALK_TILES_PER_HOUR * T * dt * (window.SAGA ? SAGA.walkMult() : 1);
+    let remain = CFG.WALK_TILES_PER_HOUR * T * dt * (window.SAGA ? SAGA.walkMult() : 1) * (window.CIV ? CIV.roadMult(v) : 1);
     while (remain > 0 && t.i < t.pts.length) {
       const [px, py] = t.pts[t.i];
       const dx = px - v.x, dy = py - v.y, d = Math.hypot(dx, dy);
@@ -156,6 +156,7 @@ const SIM = (() => {
     if (window.VIL && VIL.handles(spec.type)) return VIL.check(spec, vs);
     if (window.SAGA && SAGA.handles(spec.type)) return SAGA.check(spec, vs);
     if (window.LAND && LAND.handles(spec.type)) return LAND.check(spec, vs);
+    if (window.CIV && CIV.handles(spec.type)) return CIV.check(spec, vs);
     if (window.LAY && LAY.handles(spec.type)) return LAY.check(spec, vs);
     const o = spec.target ? WORLD.byId(spec.target) : null;
     const reachable = (goals) => vs.filter(v => { let [sx, sy] = tileOf(v); if (!WORLD.walkable(sx, sy) || !WORLD.inMain(sx, sy)) [sx, sy] = WORLD.nearestMain(sx, sy); return !!WORLD.findPath(sx, sy, goals); });
@@ -233,6 +234,7 @@ const SIM = (() => {
     if (window.VIL && VIL.handles(spec.type)) return VIL.assign(spec, vs);
     if (window.SAGA && SAGA.handles(spec.type)) return SAGA.assign(spec, vs);
     if (window.LAND && LAND.handles(spec.type)) return LAND.assign(spec, vs);
+    if (window.CIV && CIV.handles(spec.type)) return CIV.assign(spec, vs);
     if (window.LAY && LAY.handles(spec.type)) return LAY.assign(spec, vs);
     if (phase() === 'evening' && !['rest', 'cancel'].includes(spec.type)) {
       // Buổi tối: ghi nhận việc cho sáng mai
@@ -461,8 +463,8 @@ const SIM = (() => {
     if (!goTo(v, ring, { kind: 'deposit' })) { v.task = { kind: 'idle', time: 0.5 }; v.note = 'Không có đường tới kho'; }
   }
   // ---------------- NGỦ TRONG LỀU ----------------
-  const bedtime = () => S.hour >= CFG.BEDTIME;
-  function bedsOf(h) { return h.type === 'longhouse' || h.type === 'greathall' ? CFG.BUILDINGS[h.type].beds : CFG.HUT.sleepers; }
+  const bedtime = () => S.hour >= (window.CIV && S.civ ? CIV.bedtimeHour() : CFG.BEDTIME);
+  function bedsOf(h) { if (window.CIV) return CIV.bedsOf(h); return h.type === 'longhouse' || h.type === 'greathall' ? CFG.BUILDINGS[h.type].beds : CFG.HUT.sleepers; }
   function doorTiles(h) {
     const y = h.y + h.h - 1;
     return h.w >= 3 ? [[h.x + Math.floor(h.w / 2), y]] : [[h.x, y], [h.x + 1, y]];
@@ -526,7 +528,7 @@ const SIM = (() => {
 
   function plan(v) {
     if (window.DEF && DEF.preplan(v)) return;
-    if (v.child && phase() !== 'evening') { if (v.carry) return goDeposit(v); return idle(v); }
+    if (v.child && phase() !== 'evening') { if (v.carry) return goDeposit(v); if (window.CIV && CIV.planChild(v)) return; return idle(v); }
     if (phase() === 'evening') {
       if (v.carry) return goDeposit(v);
       if (bedtime()) return goBed(v);
@@ -607,6 +609,7 @@ const SIM = (() => {
     if (window.VIL && VIL.planJob(v, j)) return;
     if (window.SAGA && SAGA.planJob(v, j)) return;
     if (window.LAND && LAND.planJob(v, j)) return;
+    if (window.CIV && CIV.planJob(v, j)) return;
     v.job = null;
   }
 
@@ -722,13 +725,13 @@ const SIM = (() => {
     v.carry = null;
     if (!c) return;
     let offset = 0;
-    for (const res of ['food', 'wood', 'stone', 'seeds']) {
+    for (const res of ['food', 'wood', 'stone', 'seeds', 'ore']) {
       const amt = c[res];
       if (!amt) continue;
       const room = Math.max(0, cap(res) - S.res[res]);
       const add = Math.min(room, amt);
       S.res[res] += add;
-      S.today[res + 'In'] += add;
+      S.today[res + 'In'] = (S.today[res + 'In'] || 0) + add;
       if (add > 0) EV.emit('float', { x: (st.x + 1) * T, y: st.y * T - offset, text: `+${add}`, icon: res });
       offset += 9;
       if (add < amt && (deposit._d !== S.day || S.hour - deposit._h > 3)) { deposit._d = S.day; deposit._h = S.hour; EV.emit('toast', `Kho đầy — mất ${amt - add} ${RES_NAME[res]}. Hãy nâng cấp kho hoặc xây kho lương.`); }
@@ -774,7 +777,7 @@ const SIM = (() => {
         t.time -= dt;
         if (t.time <= 0 || v.job) v.task = null;
         break;
-      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt)) && !(window.VIL && VIL.task(v, t, dt)) && !(window.SAGA && SAGA.task(v, t, dt)) && !(window.LAND && LAND.task(v, t, dt))) v.task = null;
+      default: if (!(window.DEF && DEF.task(v, t, dt)) && !(window.TRB && TRB.task(v, t, dt)) && !(window.VIL && VIL.task(v, t, dt)) && !(window.SAGA && SAGA.task(v, t, dt)) && !(window.LAND && LAND.task(v, t, dt)) && !(window.CIV && CIV.task(v, t, dt))) v.task = null;
     }
   }
 
@@ -904,6 +907,7 @@ const SIM = (() => {
     if (window.VIL) VIL.overnight();
     if (window.SAGA) SAGA.overnight();
     if (window.LAND) LAND.overnight();
+    if (window.CIV) CIV.overnight();
     if (window.QST) QST.overnight();
     unstickAll();
     log(`Ngày ${S.day} bắt đầu. Thời tiết: ${S.weather === 'rain' ? 'mưa' : 'nắng'}.`);
@@ -925,6 +929,7 @@ const SIM = (() => {
     if (window.DEF) DEF.tick(dt);
     if (window.SAGA) SAGA.tick(dt);
     if (window.LAND) LAND.tick(dt);
+    if (window.CIV) CIV.tick(dt);
     if (window.QST) QST.tick(dt);
     if (S.hour >= CFG.DAY_END && (S.hour >= CFG.NIGHT_MAX || S.villagers.every(asleep))) endDay();
   }
@@ -970,7 +975,7 @@ const SIM = (() => {
     if (t0 && t0.kind === 'sleep') { const h = WORLD.byId(v.inside); return h && h.type === 'longhouse' ? 'Đang ngủ trong nhà dài' : 'Đang ngủ trong lều'; }
     if (t0 && t0.kind === 'sleepout') return 'Ngủ ngoài trời bên lửa (thiếu chỗ ngủ)';
     if (bedtime() && v.bed && !v.carry) return 'Đang về lều ngủ';
-    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v)) || (window.VIL && VIL.jobText(v)) || (window.SAGA && SAGA.jobText(v)) || (window.LAND && LAND.jobText(v));
+    const dj = (window.DEF && DEF.jobText(v)) || (window.TRB && TRB.jobText(v)) || (window.VIL && VIL.jobText(v)) || (window.SAGA && SAGA.jobText(v)) || (window.LAND && LAND.jobText(v)) || (window.CIV && CIV.jobText(v));
     if (dj) return dj;
     if (v.child) return `Trẻ con · lớn sau ${Math.max(0, v.growDay - S.day)} ngày`;
     if (v.resting) return v.restReason || 'Đang nghỉ';
